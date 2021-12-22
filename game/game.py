@@ -1,6 +1,8 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractclassmethod, abstractmethod
 from enum import IntEnum
 from typing import List, Optional
+
+import numpy as np
 
 
 class Result(IntEnum):
@@ -41,4 +43,14 @@ class Game(ABC):
     @abstractmethod
     def game_result(self) -> Optional[Result]:
         """Returns a Result (1, 0, -1) corresponding to a win, draw or loss"""
+        pass
+
+    @abstractmethod
+    def encode(self) -> np.ndarray:
+        """Encode current game into NN representation"""
+        pass
+
+    @abstractmethod
+    def decode(self, encoded: np.ndarray):
+        """Decode NN representation"""
         pass

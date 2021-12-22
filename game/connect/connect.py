@@ -130,3 +130,14 @@ class ConnectGame(Game):
                 self.check_winner(-1),
             )
         )
+
+    def encode(self):
+        encoded = np.zeros([self.nrow, self.ncol, 3], dtype=int)
+        encoded[:, :, 0] = self.state.board == 1
+        encoded[:, :, 1] = self.state.board == -1
+        encoded[:, :, 2] = self.state.current_player
+        return encoded.astype(int)
+
+    def decode(self, encoded: np.ndarray):
+        self.state.board = encoded[:, :, 0] - encoded[:, :, 1]
+        self.state.current_player = encoded[0, 0, 2]

@@ -76,7 +76,7 @@ class ConnectGame(Game):
             return Result(1)
         if self.check_winner(-1):
             return Result(-1)
-        if self.get_action_space() is []:
+        if not self.get_action_space():
             return Result(0)
 
     def get_action_space(self) -> List[Action]:
@@ -125,7 +125,7 @@ class ConnectGame(Game):
     def game_over(self) -> bool:
         return any(
             (
-                self.get_action_space() is [],
+                not self.get_action_space(),
                 self.check_winner(1),
                 self.check_winner(-1),
             )

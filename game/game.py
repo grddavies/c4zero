@@ -4,6 +4,8 @@ from typing import List, Optional
 
 import numpy as np
 
+from game.util import EasyDict
+
 
 class Result(IntEnum):
     WIN = 1
@@ -12,7 +14,9 @@ class Result(IntEnum):
 
 
 class GameState(ABC):
-    pass
+    def __init__(self, board: np.ndarray, current_player: int) -> None:
+        self.board = board
+        self.current_player = current_player
 
 
 class Action(ABC):
@@ -21,8 +25,16 @@ class Action(ABC):
         pass
 
 
+class GameConfig(ABC, EasyDict):
+    pass
+
+
 class Game(ABC):
     """Abstract Class to represent interface to turn based games"""
+
+    def __init__(self, cfg: GameConfig) -> None:
+        self.cfg = cfg
+        self.state: GameState
 
     @abstractmethod
     def get_action_space(self) -> List["Action"]:

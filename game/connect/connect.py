@@ -1,10 +1,9 @@
-import copy
 from enum import IntEnum
 from typing import List
 
 import numpy as np
 
-from game.game import Action, Game, GameState, Result
+from game.game import Action, Game, GameConfig, GameState, Result
 
 
 class ConnectPlayer(IntEnum):
@@ -39,19 +38,30 @@ class ConnectAction(Action):
         return ConnectGameState(new_board, -state.current_player)
 
 
-class ConnectGame(Game):
+class ConnectGameConfig(GameConfig):
     def __init__(
-        self, nrow: int, ncol: int, win_cond: int = 4, start_player: ConnectPlayer = 1
+        self,
+        nrow: int = 6,
+        ncol: int = 7,
+        win_cond: int = 4,
+        start_player: ConnectPlayer = ConnectPlayer(1),
     ):
-        self.nrow = nrow
-        self.ncol = ncol
-        self.win_cond = win_cond
+        self.nrow, self.ncol = nrow, ncol
         if win_cond > max(nrow, ncol):
             raise ValueError(
                 f"Win condition {win_cond} too long for ",
                 f"board shape ({nrow}, {ncol})",
             )
-        self.state = ConnectGameState(np.zeros((nrow, ncol), dtype=int), start_player)
+        self.win_cond = win_cond
+        self.start_player = start_player
+
+
+class ConnectGame(Game):
+    def __init__(self, cfg=ConnectGameConfig()):
+        self.cfg = cfg
+        self.state = ConnectGameState(
+            np.zeros((cfg.nrow, cfg.ncol), dtype=int), cfg.start_player
+        )
 
     @property
     def state(self) -> ConnectGameState:
@@ -59,14 +69,14 @@ class ConnectGame(Game):
 
     @state.setter
     def state(self, state: GameState):
-        if state.board.shape != (self.nrow, self.ncol):
+        if state.board.shape != (self.cfg.nrow, self.cfg.ncol):
             raise ValueError("Incorrect board dimensions for this game")
         self._state = state
 
     def move(self, col: int, action: Action = None):
         if action is None:
             action = ConnectAction(col)
-        newgame = copy.deepcopy(self)
+        newgame = ConnectGame(self.cfg)
         newgame.state = action(self.state)
         return newgame
 
@@ -84,55 +94,51 @@ class ConnectGame(Game):
 
     def _h_check(self, p: ConnectPlayer, n: int):
         """Check for n pieces belonging to p in a horizontal line"""
-        for i in range(self.nrow):
-            for j in range(self.ncol - (n - 1)):
+        for i in range(self.cfg.nrow):
+            for j in range(self.cfg.ncol - (n - 1)):
                 if all(self.state.board[i, j + x] == p for x in range(n)):
                     return True
 
     def _v_check(self, p: ConnectPlayer, n: int):
         """Check for n pieces belonging to p in a vertical line"""
-        for i in range(self.nrow - (n - 1)):
-            for j in range(self.ncol):
+        for i in range(self.cfg.nrow - (n - 1)):
+            for j in range(self.cfg.ncol):
                 if all(self.state.board[i + x, j] == p for x in range(n)):
                     return True
 
     def _d_check(self, p: ConnectPlayer, n: int):
         """Check for n pieces belonging to p in a diagonal line"""
         # Ascending diagonal check
-        for i in range(self.nrow - (n - 1)):
-            for j in range(n - 1, self.ncol):
+        for i in range(self.cfg.nrow - (n - 1)):
+            for j in range(n - 1, self.cfg.ncol):
                 if all(self.state.board[i + x, j - x] == p for x in range(n)):
                     return True
         # Descending diagonal check
-        for i in range(self.nrow - (n - 1)):
-            for j in range(self.ncol - (n - 1)):
+        for i in range(self.cfg.nrow - (n - 1)):
+            for j in range(self.cfg.ncol - (n - 1)):
                 if all(self.state.board[i + x, j + x] == p for x in range(n)):
                     return True
 
     def check_winner(self, p: ConnectPlayer):
         """Check if player p has won"""
         # Horizontal check
-        if self._h_check(p, self.win_cond):
+        if self._h_check(p, self.cfg.win_cond):
             return True
         # Vertical check
-        if self._v_check(p, self.win_cond):
+        if self._v_check(p, self.cfg.win_cond):
             return True
         # Diagonals check
-        if self._d_check(p, self.win_cond):
+        if self._d_check(p, self.cfg.win_cond):
             return True
 
     @property
     def game_over(self) -> bool:
         return any(
-            (
-                not self.get_action_space(),
-                self.check_winner(1),
-                self.check_winner(-1),
-            )
+            (not self.get_action_space(), self.check_winner(1), self.check_winner(-1),)
         )
 
     def encode(self):
-        encoded = np.zeros([self.nrow, self.ncol, 3], dtype=int)
+        encoded = np.zeros([self.cfg.nrow, self.cfg.ncol, 3], dtype=int)
         encoded[:, :, 0] = self.state.board == 1
         encoded[:, :, 1] = self.state.board == -1
         encoded[:, :, 2] = self.state.current_player

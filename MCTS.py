@@ -1,14 +1,9 @@
 from math import sqrt
-from typing import Dict, List
+from typing import Dict, List, Union
 import numpy as np
 
-from game.game import Game, Player
-
-
-class Network:
-    """DummyNetwork for standard connect 4 game"""
-    def predict(self, state_rep):
-        return np.array([1 / 7 for _ in range(7)]), 0.5
+from game.game import Action, Game, Player
+from network import Network
 
 
 class Node:
@@ -57,7 +52,7 @@ class Node:
         best_score = -np.inf
         best_child = None
         for child in self.children.values():
-            score = ucb_score(self, child)
+            score = self.ucb_score(child)
             if score > best_score:
                 best_score = score
                 best_child = child
@@ -79,16 +74,15 @@ class Node:
         p = "{0:.2f}".format(self.prior)
         return f"{self.game}\nPrior: {p} Count: {self.n} Value: {self.value}"
 
-
-def ucb_score(parent: Node, child: Node):
-    """Calculate the upper confidence bound score between nodes"""
-    prior_score = child.prior * sqrt(parent.n) / (child.n + 1)
-    if child.n > 0:
-        # The value of the child is from the perspective of the opposing player
-        value_score = -child.value
-    else:
-        value_score = 0
-    return value_score + prior_score
+    def ucb_score(self, child: "Node"):
+        """Calculate the upper confidence bound score between nodes"""
+        prior_score = child.prior * sqrt(self.n) / (child.n + 1)
+        if child.n > 0:
+            # The value of the child is from the perspective of the opposing player
+            value_score = -child.value
+        else:
+            value_score = 0
+        return value_score + prior_score
 
 
 class MCTS:
@@ -143,7 +137,7 @@ class MCTS:
             node._visit_count += 1
 
     @staticmethod
-    def normalize_probabilities(policy, actions):
+    def normalize_probabilities(policy: np.ndarray, actions: List[Union[Action, None]]):
         valid_actions = [action is not None for action in actions]
         policy = policy * valid_actions  # Mask invalid moves
         policy /= np.sum(policy)  # Normalise new probs

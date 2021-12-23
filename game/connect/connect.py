@@ -15,6 +15,9 @@ class ConnectGameState(GameState):
         self.board = board
         self.current_player = current_player
 
+    def __repr__(self) -> str:
+        return f"{self.board}\nCurrent player: {self.current_player}"
+
 
 class DropPiece(Action):
     """Drop a piece into a column"""
@@ -23,18 +26,23 @@ class DropPiece(Action):
         self.col = col
 
     def __call__(self, state: ConnectGameState):
-        new_board = state.board.copy()
-        if new_board[0][self.col] != 0:
+        board = state.board.copy()
+        if board[0][self.col] != 0:
             raise UserWarning("Invalid move")
         # Get row to drop piece into
-        row = new_board[:, self.col].nonzero()[0]
+        row = board[:, self.col].nonzero()[0]
         if row.size > 0:
-            row = row.max()
+            row = row.min()
         else:
-            row, _ = new_board.shape
-        # Place piece
-        new_board[row - 1, self.col] = state.current_player
-        return ConnectGameState(new_board, -state.current_player)
+            row, _ = board.shape
+        # Place piece - always a 1 as we always play from current player's
+        # perspective
+        board[row - 1, self.col] = 1
+        # Invert board representation
+        return ConnectGameState(-board, -state.current_player)
+
+    def __repr__(self) -> str:
+        return f"DropPiece({self.col})"
 
 
 class ConnectGameConfig(GameConfig):
@@ -59,7 +67,7 @@ class ConnectGame(Game):
     def __init__(self, cfg: ConnectGameConfig = ConnectGameConfig()):
         self.cfg = cfg
         self.state = ConnectGameState(
-            np.zeros((cfg.nrow, cfg.ncol), dtype=int), cfg.start_player
+            np.zeros((cfg.nrow, cfg.ncol), dtype=int), cfg.start_player,
         )
 
     @property
@@ -83,7 +91,7 @@ class ConnectGame(Game):
             return Result(1)
         if self.check_winner(-player):
             return Result(-1)
-        if not self.get_valid_actions():
+        if all(x is None for x in self.get_valid_actions()):
             # No winner and no remaining actions = draw
             return Result(0)
 
@@ -135,7 +143,11 @@ class ConnectGame(Game):
     @property
     def game_over(self) -> bool:
         return any(
-            (not self.get_valid_actions(), self.check_winner(1), self.check_winner(-1),)
+            (
+                all(x is None for x in self.get_valid_actions()),
+                self.check_winner(1),
+                self.check_winner(-1),
+            )
         )
 
     def encode(self):
@@ -150,8 +162,4 @@ class ConnectGame(Game):
         self.state.current_player = encoded[0, 0, 2]
 
     def __repr__(self):
-        return (
-            f"{self.state.board}\n"
-            + f"Current player: {self.state.current_player}\n"
-            + f"Win condition: {self.cfg.win_cond}"
-        )
+        return f"{self.state}\nWin condition: {self.cfg.win_cond}"

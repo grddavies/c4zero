@@ -1,6 +1,6 @@
 import numpy as np
 
-from .connect import ConnectGame, ConnectGameConfig, DropPiece
+from game.connect.connect import ConnectGame, ConnectGameConfig, DropPiece
 
 
 class TestConnectGame:
@@ -21,13 +21,16 @@ class TestConnectGame:
 
     def test_move(self):
         game = ConnectGame(ConnectGameConfig(6, 7))
+        assert game.state.current_player == 1
         game = game.move(DropPiece(0))
-        assert game.state.board[5, 0] == 1
+        # from p-1s perspective
         assert game.state.current_player == -1
+        assert game.state.board[5, 0] == -1
         game = game.move(DropPiece(0))
+        # from p1s perspective
+        assert game.state.current_player == 1
         assert game.state.board[5, 0] == 1
         assert game.state.board[4, 0] == -1
-        assert game.state.current_player == 1
 
     def test_win_conditions(self):
         # horizontal

@@ -2,11 +2,10 @@ from enum import IntEnum
 from typing import List
 
 import numpy as np
+from game.game import Action, Game, GameConfig, GameState, Player, Result
 
-from game.game import Action, Game, GameConfig, GameState, Result
 
-
-class ConnectPlayer(IntEnum):
+class ConnectPlayer(Player, IntEnum):
     RED = 1
     YELLOW = -1
 
@@ -17,8 +16,8 @@ class ConnectGameState(GameState):
         self.current_player = current_player
 
 
-class ConnectAction(Action):
-    """Actions in a connect-X style game"""
+class DropPiece(Action):
+    """Drop a piece into a column"""
 
     def __init__(self, col: int):
         self.col = col
@@ -57,7 +56,7 @@ class ConnectGameConfig(GameConfig):
 
 
 class ConnectGame(Game):
-    def __init__(self, cfg=ConnectGameConfig()):
+    def __init__(self, cfg: ConnectGameConfig = ConnectGameConfig()):
         self.cfg = cfg
         self.state = ConnectGameState(
             np.zeros((cfg.nrow, cfg.ncol), dtype=int), cfg.start_player
@@ -68,29 +67,31 @@ class ConnectGame(Game):
         return self._state
 
     @state.setter
-    def state(self, state: GameState):
+    def state(self, state: ConnectGameState):
         if state.board.shape != (self.cfg.nrow, self.cfg.ncol):
             raise ValueError("Incorrect board dimensions for this game")
         self._state = state
 
-    def move(self, col: int, action: Action = None):
-        if action is None:
-            action = ConnectAction(col)
+    def move(self, action: Action):
         newgame = ConnectGame(self.cfg)
         newgame.state = action(self.state)
         return newgame
 
-    def game_result(self):
+    def reward_player(self, player: ConnectPlayer):
         """Returns a Result (1, 0, -1) corresponding to a win, draw or loss"""
-        if self.check_winner(1):
+        if self.check_winner(player):
             return Result(1)
-        if self.check_winner(-1):
+        if self.check_winner(-player):
             return Result(-1)
-        if not self.get_action_space():
+        if not self.get_valid_actions():
+            # No winner and no remaining actions = draw
             return Result(0)
 
-    def get_action_space(self) -> List[Action]:
-        return [i for i, x in enumerate(self.state.board[0, :]) if x == 0]
+    def get_valid_actions(self) -> List[Action]:
+        return [
+            DropPiece(i) if x == 0 else None
+            for i, x in enumerate(self.state.board[0, :])
+        ]
 
     def _h_check(self, p: ConnectPlayer, n: int):
         """Check for n pieces belonging to p in a horizontal line"""
@@ -134,7 +135,7 @@ class ConnectGame(Game):
     @property
     def game_over(self) -> bool:
         return any(
-            (not self.get_action_space(), self.check_winner(1), self.check_winner(-1),)
+            (not self.get_valid_actions(), self.check_winner(1), self.check_winner(-1),)
         )
 
     def encode(self):
@@ -147,3 +148,10 @@ class ConnectGame(Game):
     def decode(self, encoded: np.ndarray):
         self.state.board = encoded[:, :, 0] - encoded[:, :, 1]
         self.state.current_player = encoded[0, 0, 2]
+
+    def __repr__(self):
+        return (
+            f"{self.state.board}\n"
+            + f"Current player: {self.state.current_player}\n"
+            + f"Win condition: {self.cfg.win_cond}"
+        )

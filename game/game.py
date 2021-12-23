@@ -1,10 +1,14 @@
-from abc import ABC, abstractclassmethod, abstractmethod
+from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import IntEnum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 
 from game.util import EasyDict
+
+
+class Player:
+    pass
 
 
 class Result(IntEnum):
@@ -14,6 +18,7 @@ class Result(IntEnum):
 
 
 class GameState(ABC):
+    """Class to represent game pieces and current player"""
     def __init__(self, board: np.ndarray, current_player: int) -> None:
         self.board = board
         self.current_player = current_player
@@ -37,7 +42,7 @@ class Game(ABC):
         self.state: GameState
 
     @abstractmethod
-    def get_action_space(self) -> List["Action"]:
+    def get_valid_actions(self) -> List[Union["Action", None]]:
         """Return list of legal actions based on current state"""
         pass
 
@@ -53,7 +58,7 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def game_result(self) -> Optional[Result]:
+    def reward_player(self, player: Player) -> Optional[Result]:
         """Returns a Result (1, 0, -1) corresponding to a win, draw or loss"""
         pass
 
@@ -65,4 +70,8 @@ class Game(ABC):
     @abstractmethod
     def decode(self, encoded: np.ndarray):
         """Decode NN representation"""
+        pass
+
+    @abstractmethod
+    def __repr__(self) -> str:
         pass

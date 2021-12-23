@@ -94,8 +94,9 @@ class C4Zero(nn.Module):
     def predict(self, X: np.ndarray):
         s = torch.FloatTensor(X)
         self.eval()
-        policy, value = self.forward(s)
-        return policy.data.cpu().numpy()[0], value.data.cpu().numpy()[0]
+        with torch.no_grad():
+            policy, value = self.forward(s)
+        return policy.numpy().flatten(), value.numpy().flatten()
 
 
 class AlphaLoss(nn.Module):

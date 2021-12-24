@@ -3,7 +3,7 @@ from typing import Dict, List, Union
 import numpy as np
 
 from game.game import Action, Game, Player
-from network import Network
+from c4zero import C4Zero
 
 
 class Node:
@@ -63,8 +63,9 @@ class Node:
         Expand a node and keep track of the prior policy probability
         """
         actions = self.game.get_valid_actions()
+        # FIXME:  method probably in wrong class
+        action_probs = MCTS.normalize_probabilities(action_probs, actions)
         for a, prob in enumerate(action_probs):
-            # NOTE: set invalid move probs to zero
             if prob == 0:
                 continue
             self.children[a] = Node(prob, self.game.move(actions[a]))
@@ -72,7 +73,10 @@ class Node:
     def __repr__(self):
         """Pretty print node info"""
         p = "{0:.2f}".format(self.prior)
-        return f"{self.game}\nPrior: {p} Count: {self.n} Value: {self.value}"
+        return (
+            f"{self.game.state}\nPrior: {p} Count: {self.n} "
+            + f"Value: {self.value}\nExpanded: {self.expanded}"
+        )
 
     def ucb_score(self, child: "Node"):
         """Calculate the upper confidence bound score between nodes"""
@@ -88,7 +92,7 @@ class Node:
 class MCTS:
     """Class to perform a Monte Carlo Tree Search"""
 
-    def __init__(self, game: Game, model: Network):
+    def __init__(self, game: Game, model: C4Zero):
         self.game = game
         self.model = model
 
@@ -99,10 +103,11 @@ class MCTS:
         # EXPAND root
         # Get policy, value from model
         action_probs, value = self.model.predict(root.game.encode())
-        valid_moves = self.game.get_valid_actions()
+        valid_moves = root.game.get_valid_actions()
         action_probs = self.normalize_probabilities(action_probs, valid_moves)
         root.expand(action_probs)
 
+        # Simulate gameplay from this position
         for _ in range(n_simulations):
             node = root
             search_path: List[Node] = [node]
@@ -112,7 +117,8 @@ class MCTS:
                 node = node.select_child()
                 search_path.append(node)
 
-            if not node.game.game_over:
+            value = node.game.reward_player()
+            if value is None:  # Game not over
                 # EXPAND node
                 action_probs, value = self.model.predict(node.game.encode())
                 valid_moves = node.game.get_valid_actions()

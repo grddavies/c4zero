@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, abstractstaticmethod
+from abc import ABC, abstractmethod, abstractproperty
 from enum import IntEnum
 from typing import List, Optional, Union
 
@@ -51,9 +51,8 @@ class Game(ABC):
         """Perform a move and return a Game with the next state"""
         pass
 
-    @property
-    @abstractmethod
-    def game_over(self) -> bool:
+    @abstractproperty
+    def over(self) -> bool:
         """Has game reached an end-scenario?"""
         pass
 

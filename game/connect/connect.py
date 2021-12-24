@@ -85,8 +85,10 @@ class ConnectGame(Game):
         newgame.state = action(self.state)
         return newgame
 
-    def reward_player(self, player: ConnectPlayer):
+    def reward_player(self, player: ConnectPlayer = None):
         """Returns a Result (1, 0, -1) corresponding to a win, draw or loss"""
+        if player is None:
+            player = self.state.current_player
         if self.check_winner(player):
             return Result(1)
         if self.check_winner(-player):
@@ -130,18 +132,24 @@ class ConnectGame(Game):
 
     def check_winner(self, p: ConnectPlayer):
         """Check if player p has won"""
+        if self.state.current_player != p:
+            p = -1
+        else:
+            p = 1
         # Horizontal check
         if self._h_check(p, self.cfg.win_cond):
             return True
         # Vertical check
-        if self._v_check(p, self.cfg.win_cond):
+        elif self._v_check(p, self.cfg.win_cond):
             return True
         # Diagonals check
-        if self._d_check(p, self.cfg.win_cond):
+        elif self._d_check(p, self.cfg.win_cond):
             return True
+        else:
+            return False
 
     @property
-    def game_over(self) -> bool:
+    def over(self) -> bool:
         return any(
             (
                 all(x is None for x in self.get_valid_actions()),

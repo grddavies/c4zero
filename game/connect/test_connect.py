@@ -36,17 +36,19 @@ class TestConnectGame:
         # horizontal
         game = ConnectGame(ConnectGameConfig(6, 7))
         game.state.board[-1, -4:] = -1
-        assert game.game_over
+        assert game.over
         assert game.check_winner(-1)
         assert not game.check_winner(1)
         game.cfg.win_cond = 5
         assert not game.check_winner(-1)
+        assert game.reward_player(-1) is None
+        assert game.reward_player(1) is None
 
         # vertical
         game = ConnectGame(ConnectGameConfig(6, 7))
         game.state.board[-4:, 0] = 1
-        assert game.game_over
-        assert game.check_winner(1,)
+        assert game.over
+        assert game.check_winner(1)
         assert not game.check_winner(-1)
         game.cfg.win_cond = 5
         assert not game.check_winner(1)
@@ -72,3 +74,22 @@ class TestConnectGame:
         for x in range(1, 6):
             game.state.board[x, -x] = 1
         assert game.check_winner(1)
+
+        # Draw
+        game = ConnectGame(ConnectGameConfig(6, 7))
+        for i in range(7):
+            game.state.board[0, i] = (-1) ** i
+        assert game.over
+        assert not game.check_winner(1)
+        assert not game.check_winner(-1)
+        assert game.reward_player(1) == 0
+        assert game.reward_player(-1) == 0
+
+    def test_game_play(self):
+        # Connect 2
+        game = ConnectGame(ConnectGameConfig(1, 4, 2))
+        game = game.move(DropPiece(0)).move(DropPiece(3)).move(DropPiece(1))
+        assert game.over
+        assert game.check_winner(1)
+        assert game.reward_player(1) == 1
+        assert game.reward_player(-1) == -1

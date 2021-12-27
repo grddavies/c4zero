@@ -63,8 +63,9 @@ class Node:
         Expand a node and keep track of the prior policy probability
         """
         actions = self.game.get_valid_actions()
-        # FIXME:  method probably in wrong class
-        action_probs = MCTS.normalize_probabilities(action_probs, actions)
+        valid_actions = [action is not None for action in actions]
+        action_probs = action_probs * valid_actions  # Mask invalid moves
+        action_probs /= np.sum(action_probs)  # Normalise new probs
         for a, prob in enumerate(action_probs):
             if prob == 0:
                 continue
@@ -78,9 +79,9 @@ class Node:
             + f"Value: {self.value}\nExpanded: {self.expanded}"
         )
 
-    def ucb_score(self, child: "Node"):
+    def ucb_score(self, child: "Node", c_puct: float = 1.0):
         """Calculate the upper confidence bound score between nodes"""
-        prior_score = child.prior * sqrt(self.n) / (child.n + 1)
+        prior_score = c_puct * child.prior * sqrt(self.n) / (child.n + 1)
         if child.n > 0:
             # The value of the child is from the perspective of the opposing player
             value_score = -child.value
@@ -103,8 +104,6 @@ class MCTS:
         # EXPAND root
         # Get policy, value from model
         action_probs, value = self.model.predict(root.game.encode())
-        valid_moves = root.game.get_valid_actions()
-        action_probs = self.normalize_probabilities(action_probs, valid_moves)
         root.expand(action_probs)
 
         # Simulate gameplay from this position
@@ -121,8 +120,6 @@ class MCTS:
             if value is None:  # Game not over
                 # EXPAND node
                 action_probs, value = self.model.predict(node.game.encode())
-                valid_moves = node.game.get_valid_actions()
-                action_probs = self.normalize_probabilities(action_probs, valid_moves)
                 node.expand(action_probs)
 
             self.backpropagate(search_path, value, node.game.state.current_player)
@@ -141,10 +138,3 @@ class MCTS:
                 value if node.game.state.current_player == current_player else -value
             )
             node._visit_count += 1
-
-    @staticmethod
-    def normalize_probabilities(policy: np.ndarray, actions: List[Union[Action, None]]):
-        valid_actions = [action is not None for action in actions]
-        policy = policy * valid_actions  # Mask invalid moves
-        policy /= np.sum(policy)  # Normalise new probs
-        return policy

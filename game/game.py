@@ -42,6 +42,11 @@ class Game(ABC):
         self.state: GameState
 
     @abstractmethod
+    def get_action_space(self) -> int:
+        """Return the (max) number of possible actions in a game"""
+        pass
+
+    @abstractmethod
     def get_valid_actions(self) -> List[Union["Action", None]]:
         """Return list of legal actions based on current state"""
         pass

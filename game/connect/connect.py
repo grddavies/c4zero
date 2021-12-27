@@ -97,6 +97,9 @@ class ConnectGame(Game):
             # No winner and no remaining actions = draw
             return Result(0)
 
+    def get_action_space(self):
+        return self.cfg.ncol
+
     def get_valid_actions(self) -> List[Action]:
         return [
             DropPiece(i) if x == 0 else None
@@ -159,15 +162,17 @@ class ConnectGame(Game):
         )
 
     def encode(self):
-        encoded = np.zeros([self.cfg.nrow, self.cfg.ncol, 3], dtype=int)
-        encoded[:, :, 0] = self.state.board == 1
-        encoded[:, :, 1] = self.state.board == -1
-        encoded[:, :, 2] = self.state.current_player
+        # encoded = np.zeros([self.cfg.nrow, self.cfg.ncol, 3], dtype=int)
+        # encoded[:, :, 0] = self.state.board == 1
+        # encoded[:, :, 1] = self.state.board == -1
+        # encoded[:, :, 2] = self.state.current_player
+        encoded = self.state.board
         return encoded.astype(int)
 
     def decode(self, encoded: np.ndarray):
-        self.state.board = encoded[:, :, 0] - encoded[:, :, 1]
-        self.state.current_player = encoded[0, 0, 2]
+        # self.state.board = encoded[:, :, 0] - encoded[:, :, 1]
+        # self.state.current_player = encoded[0, 0, 2]
+        pass
 
     def __repr__(self):
         return f"{self.state}\nWin condition: {self.cfg.win_cond}"

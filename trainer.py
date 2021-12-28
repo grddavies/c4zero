@@ -18,7 +18,9 @@ class Trainer:
         self.args = args
         self.mcts = MCTS(game, self.model)
 
-    def execute_episode(self, n_simulations=100):
+    def execute_episode(
+        self, n_simulations: int = 100, t_mcts: float = 0.0, t_move_thresh: int = 0
+    ):
         """
         Run through an entire game of self play
 
@@ -26,6 +28,15 @@ class Trainer:
         ----------
         n_simulations: int (default = 100)
             The number of simulations per move during MCTS.
+
+        t_mtcs: float (default = 0)
+            The temperature parameter to be used for the first `t_move_thresh` moves
+            during MCTS. This parameter controls the degree of exploration (higher t,
+            more exploration behaviour).#
+
+        t_move_thresh: int (default = 0)
+            The number of moves after which the temperature parameter is set to zero.
+            After this threshold, nodes are selected by max visit count.
 
         Returns
         -------
@@ -38,6 +49,7 @@ class Trainer:
         self.mcts = MCTS(self.game, self.model)
         # Match game states and rewards?
         train_examples: List[Tuple[GameState, np.ndarray]] = []
+        n_moves = 0
         while True:
             # Run n simultaions from current state
             root = self.mcts.run(n_simulations)
@@ -48,10 +60,15 @@ class Trainer:
             # Normalise action probabilites
             action_probs = action_probs / np.sum(action_probs)
             train_examples.append((root.game.state, action_probs))
-            action_index = root.select_action(temperature=0)
+            if n_moves > t_move_thresh:
+                tau = t_mcts
+            else:
+                tau = 0
+            action_index = root.select_action(temperature=tau)
             action = root.game.get_valid_actions()[action_index]
             # Update the starting state in MCTS
             self.mcts.game = self.mcts.game.move(action)
+            n_moves += 1
 
             if not self.mcts.game.over:
                 continue
@@ -99,7 +116,7 @@ class Trainer:
                 )
                 boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
                 # boards = torch.FloatTensor(np.stack(boards, axis=2).astype(np.float64))
-                boards = torch.FloatTensor(np.array(boards).squeeze().astype(np.float64))
+                boards = torch.FloatTensor(np.array(boards).squeeze())
                 target_pis = torch.FloatTensor(np.array(pis))
                 target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
 

@@ -1,9 +1,10 @@
 from math import sqrt
-from typing import Dict, List, Union
+from typing import Dict, List
+
 import numpy as np
 
-from game.game import Action, Game, Player
 from c4zero import C4Zero
+from game.game import Game, Player
 
 
 class Node:

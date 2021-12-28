@@ -6,8 +6,8 @@ from trainer import Trainer
 args = {
     "batch_size": 64,
     "n_simulations": 100,  # Number of Monte Carlo simulations for each move
-    "numIters": 500,  # Total number of training iterations
-    "numEps": 100,  # Number of full games (episodes) to run during each iteration
+    # "numIters": 500,  # Total number of training iterations
+    # "numEps": 100,  # Number of full games (episodes) to run during each iteration
     "numItersForTrainExamplesHistory": 20,
     "epochs": 2,  # Number of epochs of training per iteration
     "checkpoint_path": "latest.pt",  # location to save latest set of weights
@@ -23,4 +23,4 @@ game = ConnectGame(game_cfg)
 model = Connect2Model(ncol, ncol, "cpu")
 
 trainer = Trainer(game, model, args)
-trainer.learn()
+trainer.learn(n_iters=500, n_eps=100).save_checkpoint(".", "latest.pt")

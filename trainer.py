@@ -86,23 +86,26 @@ class Trainer:
                 for h_state, h_action_probs in train_examples
             ]
 
-    def learn(self):
-        """Generate training data by self-play and train neural net on these data"""
-        for i in range(1, self.args["numIters"] + 1):
+    def learn(self, n_iters: int = 500, n_eps: int = 100):
+        """
+        Generate training data by self-play and train neural net on these data.
+
+        Parameters
+        ----------
+        n_iters: int (default = 500)
+            Total number of training iterations.
+
+        """
+        for i in range(1, n_iters + 1):
             # TODO: NNet comparison during training
-            print("{}/{}".format(i, self.args["numIters"]))
-
-            train_examples = []
-
-            for _ in range(self.args["numEps"]):
-                train_examples += self.execute_episode()
-
+            print(f"{i}/{n_iters}")
+            train_examples = sum((self.execute_episode() for _ in range(n_eps)), [])
             shuffle(train_examples)
             self.train(train_examples)
-            filename = self.args["checkpoint_path"]
-            self.save_checkpoint(folder=".", filename=filename)
+        return self
 
     def train(self, examples):
+        # TODO: add lr scheduler
         optimizer = optim.Adam(self.model.parameters(), lr=5e-4)
         pi_losses = []
         v_losses = []
@@ -115,7 +118,7 @@ class Trainer:
                     len(examples), size=self.args["batch_size"]
                 )
                 boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
-                # boards = torch.FloatTensor(np.stack(boards, axis=2).astype(np.float64))
+                # boards = torch.FloatTensor(np.stack(boards, axis=2))
                 boards = torch.FloatTensor(np.array(boards).squeeze())
                 target_pis = torch.FloatTensor(np.array(pis))
                 target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
@@ -158,6 +161,5 @@ class Trainer:
     def save_checkpoint(self, folder, filename):
         if not os.path.exists(folder):
             os.mkdir(folder)
-
         filepath = os.path.join(folder, filename)
-        torch.save(self.model.state_dict(), filepath)
+        torch.save({"state_dict": self.model.state_dict()}, filepath)

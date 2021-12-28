@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod, abstractproperty
 from enum import IntEnum
-from typing import List, Optional, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
+from torch.utils.data import Dataset
 
 from game.util import EasyDict
 
@@ -18,10 +19,10 @@ class Result(IntEnum):
 
 
 class GameState(ABC):
-    """Class to represent game pieces and current player"""
-    def __init__(self, board: np.ndarray, current_player: int) -> None:
-        self.board = board
-        self.current_player = current_player
+    """Class to represent a games state"""
+
+    def __init__(self) -> None:
+        pass
 
 
 class Action(ABC):
@@ -79,3 +80,18 @@ class Game(ABC):
     @abstractmethod
     def __repr__(self) -> str:
         pass
+
+
+class GamePlayDataset(Dataset):
+    def __init__(self, data: Iterable[Tuple[np.ndarray, np.ndarray, float]]) -> None:
+        """
+        Convert a list of tuples of boards, policy arrays and values into a Dataset
+        """
+        # TODO: allow flip y
+        self.data = list(data)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]

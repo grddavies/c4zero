@@ -1,14 +1,14 @@
 import os
 from typing import Dict, List, Tuple
-import numpy as np
-from random import shuffle
 
+import numpy as np
 import torch
 import torch.optim as optim
+from torch.utils.data import DataLoader
 
-from MCTS import MCTS
 from c4zero import C4Zero
-from game.game import Game, GameState
+from game.game import Game, GamePlayDataset, GameState
+from MCTS import MCTS
 
 
 class Trainer:
@@ -98,63 +98,54 @@ class Trainer:
         """
         for i in range(1, n_iters + 1):
             # TODO: NNet comparison during training
-            print(f"{i}/{n_iters}")
-            train_examples = sum((self.execute_episode() for _ in range(n_eps)), [])
-            shuffle(train_examples)
-            self.train(train_examples)
+            print(f"[{i}/{n_iters}]")
+            traindata = GamePlayDataset(
+                sum((self.execute_episode() for _ in range(n_eps)), [])
+            )
+            self.train(traindata)
         return self
 
-    def train(self, examples):
+    def train(self, traindata: GamePlayDataset, batch_size: int = 64):
         # TODO: add lr scheduler
         optimizer = optim.Adam(self.model.parameters(), lr=5e-4)
-        pi_losses = []
+        p_losses = []
         v_losses = []
+        dataloader = DataLoader(traindata, batch_size=batch_size, shuffle=True)
+        self.model.train()
 
-        for _ in range(self.args["epochs"]):
-            self.model.train()
-            batch_idx = 0
-            while batch_idx < int(len(examples) / self.args["batch_size"]):
-                sample_ids = np.random.randint(
-                    len(examples), size=self.args["batch_size"]
-                )
-                boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
-                # boards = torch.FloatTensor(np.stack(boards, axis=2))
-                boards = torch.FloatTensor(np.array(boards).squeeze())
-                target_pis = torch.FloatTensor(np.array(pis))
-                target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
-
-                # predict
-                boards = boards.contiguous()  # .cuda()
-                target_pis = target_pis.contiguous()  # .cuda()
-                target_vs = target_vs.contiguous()  # .cuda()
+        for epoch in range(self.args["epochs"]):
+            for i, data in enumerate(dataloader, 0):
+                boards, target_ps, target_vs = data
+                # FIXME: only works for 1d boards
+                boards = boards.squeeze().float()
+                target_ps = target_ps.float()
+                target_vs = target_vs.float()
 
                 # compute output
                 out_pi, out_v = self.model(boards)
-                l_pi = self.loss_pi(target_pis, out_pi)
+                l_pi = self.loss_pi(target_ps, out_pi)
                 l_v = self.loss_v(target_vs, out_v)
                 total_loss = l_pi + l_v
 
-                pi_losses.append(float(l_pi))
+                p_losses.append(float(l_pi))
                 v_losses.append(float(l_v))
 
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
 
-                batch_idx += 1
+            print(
+                f"\t[{epoch:d}, {batch_size:2d}]",
+                f"Policy Loss: {np.mean(p_losses):.6f}",
+                f"Value Loss: {np.mean(v_losses):.6f}",
+                sep="\n\t",
+            )
 
-                print()
-                print("Policy Loss", np.mean(pi_losses))
-                print("Value Loss", np.mean(v_losses))
-                print("Examples:")
-                print(out_pi[0].detach())
-                print(target_pis[0])
-
-    def loss_pi(self, targets, outputs):
+    def loss_pi(self, targets, outputs) -> torch.FloatTensor:
         loss = -(targets * torch.log(outputs)).sum(dim=1)
         return loss.mean()
 
-    def loss_v(self, targets, outputs):
+    def loss_v(self, targets, outputs) -> torch.FloatTensor:
         loss = torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
         return loss
 

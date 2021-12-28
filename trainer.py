@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 import torch
 import torch.optim as optim
+from torch import nn
 from torch.utils.data import DataLoader
 
 from c4zero import C4Zero
@@ -93,7 +94,10 @@ class Trainer:
         Parameters
         ----------
         n_iters: int (default = 500)
-            Total number of training iterations.
+            Total number of training iterations, self play and training.
+
+        n_eps: int (default = 100)
+            Number of games per training iteration.
 
         """
         for i in range(1, n_iters + 1):
@@ -108,36 +112,40 @@ class Trainer:
     def train(self, traindata: GamePlayDataset, batch_size: int = 64):
         # TODO: add lr scheduler
         optimizer = optim.Adam(self.model.parameters(), lr=5e-4)
-        p_losses = []
-        v_losses = []
+        criterion_p, criterion_v = nn.CrossEntropyLoss(), nn.MSELoss()
         dataloader = DataLoader(traindata, batch_size=batch_size, shuffle=True)
         self.model.train()
-
-        for epoch in range(self.args["epochs"]):
+        total_loss = running_v_loss = running_p_loss = 0.0
+        for epoch in range(1, self.args["epochs"] + 1):
             for i, data in enumerate(dataloader, 0):
                 boards, target_ps, target_vs = data
                 # FIXME: only works for 1d boards
                 boards = boards.squeeze().float()
                 target_ps = target_ps.float()
-                target_vs = target_vs.float()
+                target_vs = target_vs.float().view(-1, 1)
 
-                # compute output
-                out_pi, out_v = self.model(boards)
-                l_pi = self.loss_pi(target_ps, out_pi)
-                l_v = self.loss_v(target_vs, out_v)
-                total_loss = l_pi + l_v
+                # Predict
+                out_ps, out_vs = self.model(boards)
 
-                p_losses.append(float(l_pi))
-                v_losses.append(float(l_v))
+                # Calculate loss
+                v_loss: torch.Tensor = criterion_v(out_vs, target_vs)
+                p_loss: torch.Tensor = criterion_p(out_ps, target_ps)
+                loss = v_loss + p_loss
 
+                # Backprop
                 optimizer.zero_grad()
-                total_loss.backward()
+                loss.backward()
                 optimizer.step()
+
+                running_v_loss += v_loss.item()
+                running_p_loss += p_loss.item()
+                total_loss += loss.item()
 
             print(
                 f"\t[{epoch:d}, {batch_size:2d}]",
-                f"Policy Loss: {np.mean(p_losses):.6f}",
-                f"Value Loss: {np.mean(v_losses):.6f}",
+                f"Policy Loss:\t{running_p_loss/(epoch*batch_size)}",
+                f"Value Loss:\t{running_v_loss/(epoch*batch_size)}",
+                f"Total Loss:\t{total_loss/(epoch*batch_size)}",
                 sep="\n\t",
             )
 

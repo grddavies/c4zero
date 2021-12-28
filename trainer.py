@@ -13,10 +13,9 @@ from MCTS import MCTS
 
 
 class Trainer:
-    def __init__(self, game: Game, model: C4Zero, args: Dict):
+    def __init__(self, game: Game, model: C4Zero):
         self.model = model
         self.game = game
-        self.args = args
         self.mcts = MCTS(game, self.model)
 
     def execute_episode(
@@ -87,7 +86,13 @@ class Trainer:
                 for h_state, h_action_probs in train_examples
             ]
 
-    def learn(self, n_iters: int = 500, n_eps: int = 100):
+    def learn(
+        self,
+        n_iters: int = 500,
+        n_eps: int = 100,
+        epochs: int = 5,
+        batch_size: int = 64,
+    ):
         """
         Generate training data by self-play and train neural net on these data.
 
@@ -99,6 +104,13 @@ class Trainer:
         n_eps: int (default = 100)
             Number of games per training iteration.
 
+        epochs: int (default = 5)
+            Number of epochs per training iteration. In an epoch, all of the training
+            data is used once. Epochs consister of a number of minibatches.
+
+        batch_size: int (default = 64)
+            Number of samples of training data per mini batch
+
         """
         for i in range(1, n_iters + 1):
             # TODO: NNet comparison during training
@@ -106,17 +118,17 @@ class Trainer:
             traindata = GamePlayDataset(
                 sum((self.execute_episode() for _ in range(n_eps)), [])
             )
-            self.train(traindata)
+            self.train(traindata, epochs=epochs, batch_size=batch_size)
         return self
 
-    def train(self, traindata: GamePlayDataset, batch_size: int = 64):
+    def train(self, traindata: GamePlayDataset, epochs: int = 5, batch_size: int = 64):
         # TODO: add lr scheduler
         optimizer = optim.Adam(self.model.parameters(), lr=5e-4)
         criterion_p, criterion_v = nn.CrossEntropyLoss(), nn.MSELoss()
         dataloader = DataLoader(traindata, batch_size=batch_size, shuffle=True)
         self.model.train()
         total_loss = running_v_loss = running_p_loss = 0.0
-        for epoch in range(1, self.args["epochs"] + 1):
+        for epoch in range(1, epochs + 1):
             for i, data in enumerate(dataloader, 0):
                 boards, target_ps, target_vs = data
                 # FIXME: only works for 1d boards
@@ -140,14 +152,14 @@ class Trainer:
                 running_v_loss += v_loss.item()
                 running_p_loss += p_loss.item()
                 total_loss += loss.item()
-
-            print(
-                f"\t[{epoch:d}, {batch_size:2d}]",
-                f"Policy Loss:\t{running_p_loss/(epoch*batch_size)}",
-                f"Value Loss:\t{running_v_loss/(epoch*batch_size)}",
-                f"Total Loss:\t{total_loss/(epoch*batch_size)}",
-                sep="\n\t",
-            )
+        # Print summary at end of iter
+        print(
+            f"\t[{epoch:d}, {batch_size:2d}]",
+            f"Policy Loss:\t{running_p_loss/(epoch*batch_size)}",
+            f"Value Loss:\t{running_v_loss/(epoch*batch_size)}",
+            f"Total Loss:\t{total_loss/(epoch*batch_size)}",
+            sep="\n\t",
+        )
 
     def loss_pi(self, targets, outputs) -> torch.FloatTensor:
         loss = -(targets * torch.log(outputs)).sum(dim=1)

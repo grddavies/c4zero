@@ -83,12 +83,21 @@ class Game(ABC):
 
 
 class GamePlayDataset(Dataset):
-    def __init__(self, data: Iterable[Tuple[np.ndarray, np.ndarray, float]]) -> None:
+    def __init__(
+        self,
+        data: Iterable[Tuple[np.ndarray, np.ndarray, float]],
+        *,
+        flip_h: bool = False,
+        flip_v: bool = False,
+        flip_hv: bool = False,
+    ) -> None:
         """
         Convert a list of tuples of boards, policy arrays and values into a Dataset
         """
-        # TODO: allow flip y
         self.data = list(data)
+        for cond, ax in zip((flip_v, flip_h, flip_hv), (0, 1, (0, 1))):
+            if cond:
+                self.data += [(np.flip(s, axis=ax), v, p) for s, v, p in data]
 
     def __len__(self):
         return len(self.data)

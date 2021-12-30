@@ -36,7 +36,7 @@ class GameConfig(ABC, EasyDict):
 
 
 class Game(ABC):
-    """Abstract Class to represent interface to turn based games"""
+    """Abstract Class to represent interface to turn-based games"""
 
     def __init__(self, cfg: GameConfig) -> None:
         self.cfg = cfg

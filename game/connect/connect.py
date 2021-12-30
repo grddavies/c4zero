@@ -4,14 +4,16 @@ from typing import List
 import numpy as np
 from game.game import Action, Game, GameConfig, GameState, Player, Result
 
-
-class ConnectPlayer(Player, IntEnum):
-    RED = 1
-    YELLOW = -1
+class ConnectPlayer(IntEnum):
+    RED: int = 1
+    YELLOW: int = -1
 
 
 class ConnectGameState(GameState):
-    def __init__(self, board: np.ndarray, current_player: ConnectPlayer):
+    board: np.ndarray
+    current_player: int
+
+    def __init__(self, board: np.ndarray, current_player: int):
         self.board = board
         self.current_player = current_player
 
@@ -21,6 +23,7 @@ class ConnectGameState(GameState):
 
 class DropPiece(Action):
     """Drop a piece into a column"""
+    col: int
 
     def __init__(self, col: int):
         self.col = col
@@ -46,12 +49,17 @@ class DropPiece(Action):
 
 
 class ConnectGameConfig(GameConfig):
+    nrow: int
+    ncol: int
+    win_cond: int
+    start_player: int
+
     def __init__(
         self,
         nrow: int = 6,
         ncol: int = 7,
         win_cond: int = 4,
-        start_player: ConnectPlayer = ConnectPlayer(1),
+        start_player: int = 1,
     ):
         self.nrow, self.ncol = nrow, ncol
         if win_cond > max(nrow, ncol):
@@ -64,6 +72,9 @@ class ConnectGameConfig(GameConfig):
 
 
 class ConnectGame(Game):
+    cfg: ConnectGameConfig
+    _state: ConnectGameState
+
     def __init__(self, cfg: ConnectGameConfig = ConnectGameConfig()):
         self.cfg = cfg
         self.state = ConnectGameState(
@@ -93,8 +104,8 @@ class ConnectGame(Game):
             return Result(1)
         if self.check_winner(-player):
             return Result(-1)
-        if all(x is None for x in self.get_valid_actions()):
-            # No winner and no remaining actions = draw
+        if self.board_full:
+            # No winner and board full = draw
             return Result(0)
 
     def get_action_space(self):
@@ -153,13 +164,14 @@ class ConnectGame(Game):
 
     @property
     def over(self) -> bool:
-        return any(
-            (
-                all(x is None for x in self.get_valid_actions()),
-                self.check_winner(1),
-                self.check_winner(-1),
-            )
-        )
+        if self.board_full or self.check_winner(1) or self.check_winner(-1):
+            return True
+        else:
+            return False
+
+    @property
+    def board_full(self) -> bool:
+        return self.state.board.all()
 
     def encode(self):
         # encoded = np.zeros([self.cfg.nrow, self.cfg.ncol, 3], dtype=int)

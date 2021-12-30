@@ -4,22 +4,33 @@ from typing import List, Tuple
 import numpy as np
 import torch
 import torch.optim as optim
+from joblib import delayed, parallel
 from torch import nn
 from torch.utils.data import DataLoader
 
 from c4zero import C4Zero
 from game.game import Game, GamePlayDataset, GameState
+from game.util import ProgressParallel
 from MCTS import MCTS
 
 
 class Trainer:
-    def __init__(self, game: Game, model: C4Zero):
+    def __init__(self, game: Game, model: C4Zero, n_jobs: int = None):
+        """
+        Parameters
+        ----------
+
+        n_jobs: Optional int (default = None)
+            Number of CPUs to use during self play. `None` means 1 unless in a
+            :obj:`joblib.parallel_backend` context. `-1` means using all processors.
+        """
         self.model = model
         self.game = game
         self.mcts = MCTS(game, self.model)
+        self.n_jobs = parallel.effective_n_jobs(n_jobs)
 
     def execute_episode(
-        self, n_simulations: int = 100, t_mcts: float = 0.0, t_move_thresh: int = 0
+        self, n_simulations: int = 100, t_mcts: float = 1.0, t_move_thresh: int = 8
     ):
         """
         Run through an entire game of self play
@@ -32,7 +43,7 @@ class Trainer:
         t_mtcs: float (default = 0)
             The temperature parameter to be used for the first `t_move_thresh` moves
             during MCTS. This parameter controls the degree of exploration (higher t,
-            more exploration behaviour).#
+            more exploration behaviour).
 
         t_move_thresh: int (default = 0)
             The number of moves after which the temperature parameter is set to zero.
@@ -92,6 +103,7 @@ class Trainer:
         n_eps: int = 100,
         epochs: int = 5,
         batch_size: int = 64,
+        n_sim: int = 100,
     ):
         """
         Generate training data by self-play and train neural net on these data.
@@ -111,13 +123,22 @@ class Trainer:
         batch_size: int (default = 64)
             Number of samples of training data per mini batch
 
+        n_sim: int (default = 100)
+            Number of simulations to run during MCTS
         """
         for i in range(1, n_iters + 1):
             # TODO: NNet comparison during training
             print(f"[{i}/{n_iters}]")
+            print(f"\tExecuting self-play for {n_eps} episodes...")
             traindata = GamePlayDataset(
-                sum((self.execute_episode() for _ in range(n_eps)), [])
+                sum(
+                    ProgressParallel(self.n_jobs, total=n_eps, leave=False)(
+                        delayed(self.execute_episode)(n_sim) for _ in range(n_eps)
+                    ),
+                    [],
+                )
             )
+            print("\tTraining...")
             self.train(traindata, epochs=epochs, batch_size=batch_size)
         return self
 

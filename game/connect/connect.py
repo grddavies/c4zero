@@ -167,7 +167,7 @@ class ConnectGame(Game):
         # encoded[:, :, 1] = self.state.board == -1
         # encoded[:, :, 2] = self.state.current_player
         encoded = self.state.board
-        return encoded.astype(int)
+        return encoded.reshape([1, 1, self.cfg.nrow, self.cfg.ncol])
 
     def decode(self, encoded: np.ndarray):
         # self.state.board = encoded[:, :, 0] - encoded[:, :, 1]

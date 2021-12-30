@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -131,17 +131,20 @@ class Trainer:
         for epoch in range(1, epochs + 1):
             for i, data in enumerate(dataloader, 0):
                 boards, target_ps, target_vs = data
-                # FIXME: only works for 1d boards
-                boards = boards.squeeze().float()
-                target_ps = target_ps.float()
+                # NOTE: Boards are encoded as: (batch_size, nchannel, width, height) to
+                # ensure compatibility with conv2d layers
+                boards = boards.float().view(
+                    -1, 1, self.game.cfg.nrow, self.game.cfg.ncol
+                )
+                target_ps = target_ps.float().view(-1, self.game.get_action_space())
                 target_vs = target_vs.float().view(-1, 1)
 
                 # Predict
                 out_ps, out_vs = self.model(boards)
 
                 # Calculate loss
-                v_loss: torch.Tensor = criterion_v(out_vs, target_vs)
-                p_loss: torch.Tensor = criterion_p(out_ps, target_ps)
+                v_loss: torch.Tensor = criterion_v(out_vs.view(-1, 1), target_vs)
+                p_loss: torch.Tensor = criterion_p(torch.squeeze(out_ps), target_ps)
                 loss = v_loss + p_loss
 
                 # Backprop

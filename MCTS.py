@@ -67,7 +67,7 @@ class Node:
         valid_actions = [action is not None for action in actions]
         action_probs = action_probs * valid_actions  # Mask invalid moves
         action_probs /= np.sum(action_probs)  # Normalise new probs
-        for a, prob in enumerate(action_probs):
+        for a, prob in enumerate(action_probs.flatten()):
             if prob == 0:
                 continue
             self.children[a] = Node(prob, self.game.move(actions[a]))

@@ -130,17 +130,47 @@ class Trainer:
             # TODO: NNet comparison during training
             print(f"[{i}/{n_iters}]")
             print(f"\tExecuting self-play for {n_eps} episodes...")
-            traindata = GamePlayDataset(
-                sum(
-                    ProgressParallel(self.n_jobs, total=n_eps, leave=False)(
-                        delayed(self.execute_episode)(n_sim) for _ in range(n_eps)
-                    ),
-                    [],
-                )
-            )
+            traindata = self.selfplay(n_eps, n_sim)
             print("\tTraining...")
             self.train(traindata, epochs=epochs, batch_size=batch_size)
         return self
+
+    def selfplay(
+        self,
+        n_eps: int,
+        n_sim: int = 100,
+        t_mcts: float = 1.0,
+        t_move_thresh: int = 8,
+        flip_h: bool = False,
+        flip_v: bool = False,
+        flip_hv: bool = False,
+    ):
+        """
+        Run games of self play and store output as a dataset
+
+        n_eps: int
+            Number of games to play
+
+        n_sim: int (default = 100)
+            Number of simulations to run during MCTS
+
+        t_mtcs: float (default = 0)
+            The temperature parameter to be used for the first `t_move_thresh` moves
+            during MCTS. This parameter controls the degree of exploration (higher t,
+            more exploration behaviour).
+
+        t_move_thresh: int (default = 0)
+            The number of moves after which the temperature parameter is set to zero.
+            After this threshold, nodes are selected by max visit count.
+
+        """
+        data = ProgressParallel(self.n_jobs, total=n_eps, leave=False)(
+            delayed(self.execute_episode)(n_sim, t_mcts, t_move_thresh)
+            for _ in range(n_eps)
+        )
+        return GamePlayDataset(
+            sum(data, []), flip_h=flip_h, flip_v=flip_v, flip_hv=flip_hv,
+        )
 
     def train(self, traindata: GamePlayDataset, epochs: int = 5, batch_size: int = 64):
         # TODO: add lr scheduler
@@ -149,6 +179,7 @@ class Trainer:
         dataloader = DataLoader(traindata, batch_size=batch_size, shuffle=True)
         self.model.train()
         total_loss = running_v_loss = running_p_loss = 0.0
+        action_size = self.game.get_action_space()
         for epoch in range(1, epochs + 1):
             for i, data in enumerate(dataloader, 0):
                 boards, target_ps, target_vs = data
@@ -157,15 +188,16 @@ class Trainer:
                 boards = boards.float().view(
                     -1, 1, self.game.cfg.nrow, self.game.cfg.ncol
                 )
-                target_ps = target_ps.float().view(-1, self.game.get_action_space())
+                target_ps = target_ps.float().view(-1, action_size)
                 target_vs = target_vs.float().view(-1, 1)
 
                 # Predict
                 out_ps, out_vs = self.model(boards)
+                out_ps, out_vs = out_ps.view(-1, action_size), out_vs.view(-1, 1)
 
                 # Calculate loss
-                v_loss: torch.Tensor = criterion_v(out_vs.view(-1, 1), target_vs)
-                p_loss: torch.Tensor = criterion_p(torch.squeeze(out_ps), target_ps)
+                v_loss: torch.Tensor = criterion_v(out_vs, target_vs)
+                p_loss: torch.Tensor = criterion_p(out_ps, target_ps)
                 loss = v_loss + p_loss
 
                 # Backprop

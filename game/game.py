@@ -5,8 +5,6 @@ from typing import Iterable, List, Optional, Tuple, Union
 import numpy as np
 from torch.utils.data import Dataset
 
-from game.util import EasyDict
-
 
 class Player:
     pass
@@ -21,8 +19,7 @@ class Result(IntEnum):
 class GameState(ABC):
     """Class to represent a games state"""
 
-    def __init__(self) -> None:
-        pass
+    pass
 
 
 class Action(ABC):
@@ -31,7 +28,7 @@ class Action(ABC):
         pass
 
 
-class GameConfig(ABC, EasyDict):
+class GameConfig(ABC):
     pass
 
 
@@ -97,7 +94,9 @@ class GamePlayDataset(Dataset):
         self.data = list(data)
         for cond, ax in zip((flip_v, flip_h, flip_hv), (0, 1, (0, 1))):
             if cond:
-                self.data += [(np.flip(s, axis=ax), v, p) for s, v, p in data]
+                self.data += [
+                    (np.flip(s, axis=ax), np.flip(p, axis=ax), v) for s, p, v in data
+                ]
 
     def __len__(self):
         return len(self.data)

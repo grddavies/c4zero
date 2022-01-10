@@ -72,14 +72,6 @@ class Node:
                 continue
             self.children[a] = Node(prob, self.game.move(actions[a]))
 
-    def __repr__(self):
-        """Pretty print node info"""
-        p = "{0:.2f}".format(self.prior)
-        return (
-            f"{self.game.state}\nPrior: {p} Count: {self.n} "
-            + f"Value: {self.value}\nExpanded: {self.expanded}"
-        )
-
     def ucb_score(self, child: "Node", c_puct: float = 1.0):
         """Calculate the upper confidence bound score between nodes"""
         prior_score = c_puct * child.prior * sqrt(self.n) / (child.n + 1)
@@ -89,6 +81,17 @@ class Node:
         else:
             value_score = 0
         return value_score + prior_score
+
+    def __str__(self):
+        """Pretty print node info"""
+        p = "{0:.2f}".format(self.prior)
+        return (
+            f"{self.game.state}\nPrior: {p} Count: {self.n} "
+            + f"Value: {self.value}\nExpanded: {self.expanded}"
+        )
+
+    def __repr__(self) -> str:
+        return f"Node({self.prior}, {self.game!r})"
 
 
 class MCTS:

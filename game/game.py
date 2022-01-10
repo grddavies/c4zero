@@ -7,7 +7,9 @@ from torch.utils.data import Dataset
 
 
 class Player:
-    pass
+    @abstractmethod
+    def play(self, game: "Game") -> "Action":
+        pass
 
 
 class Result(IntEnum):
@@ -18,7 +20,8 @@ class Result(IntEnum):
 
 class GameState(ABC):
     """Class to represent a games state"""
-
+    current_player: int
+    board: np.ndarray
     pass
 
 
@@ -34,6 +37,9 @@ class GameConfig(ABC):
 
 class Game(ABC):
     """Abstract Class to represent interface to turn-based games"""
+
+    cfg: GameConfig
+    state: GameState
 
     def __init__(self, cfg: GameConfig) -> None:
         self.cfg = cfg
@@ -60,7 +66,7 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def reward_player(self, player: Player) -> Optional[Result]:
+    def reward_player(self, player: int) -> Optional[Result]:
         """Returns a Result (1, 0, -1) corresponding to a win, draw or loss"""
         pass
 

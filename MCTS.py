@@ -75,11 +75,8 @@ class Node:
     def ucb_score(self, child: "Node", c_puct: float = 1.0):
         """Calculate the upper confidence bound score between nodes"""
         prior_score = c_puct * child.prior * sqrt(self.n) / (child.n + 1)
-        if child.n > 0:
-            # The value of the child is from the perspective of the opposing player
-            value_score = -child.value
-        else:
-            value_score = 0
+        # The value of the child is from the perspective of the opposing player
+        value_score = -child.value
         return value_score + prior_score
 
     def __str__(self):
@@ -105,7 +102,7 @@ class MCTS:
         """Run Monte Carlo Tree Search"""
 
         root = Node(0, self.game)
-        # EXPAND root
+        # Expand root
         # Get policy, value from model
         action_probs, value = self.model.predict(root.game.encode())
         root.expand(action_probs)
@@ -115,17 +112,18 @@ class MCTS:
             node = root
             search_path: List[Node] = [node]
 
-            # SELECT
+            # Select
             while node.expanded:
                 node = node.select_child()
                 search_path.append(node)
 
             value = node.game.reward_player()
             if value is None:  # Game not over
-                # EXPAND node
+                # Expand & Evaluate
+                # TODO: Randomly reflect/rotate board along symmetry line here
                 action_probs, value = self.model.predict(node.game.encode())
                 node.expand(action_probs)
-
+            # Backup
             self.backpropagate(search_path, value, node.game.state.current_player)
 
         return root

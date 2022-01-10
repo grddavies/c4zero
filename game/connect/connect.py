@@ -1,28 +1,23 @@
-from enum import IntEnum
+from collections import namedtuple
 from typing import List
 
 import numpy as np
-from game.game import Action, Game, GameConfig, GameState, Player, Result
-
-class ConnectPlayer(IntEnum):
-    RED: int = 1
-    YELLOW: int = -1
+from game.game import Action, Game, GameConfig, GameState, Result
 
 
-class ConnectGameState(GameState):
+class ConnectGameState(
+    GameState, namedtuple("ConnectGameState", ("board", "current_player")),
+):
     board: np.ndarray
     current_player: int
 
-    def __init__(self, board: np.ndarray, current_player: int):
-        self.board = board
-        self.current_player = current_player
-
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"{self.board}\nCurrent player: {self.current_player}"
 
 
 class DropPiece(Action):
     """Drop a piece into a column"""
+
     col: int
 
     def __init__(self, col: int):
@@ -55,11 +50,7 @@ class ConnectGameConfig(GameConfig):
     start_player: int
 
     def __init__(
-        self,
-        nrow: int = 6,
-        ncol: int = 7,
-        win_cond: int = 4,
-        start_player: int = 1,
+        self, nrow: int = 6, ncol: int = 7, win_cond: int = 4, start_player: int = 1,
     ):
         self.nrow, self.ncol = nrow, ncol
         if win_cond > max(nrow, ncol):
@@ -69,6 +60,14 @@ class ConnectGameConfig(GameConfig):
             )
         self.win_cond = win_cond
         self.start_player = start_player
+
+    def __repr__(self) -> str:
+        rep = (
+            f"ConnectGameConfig({self.nrow}, "
+            + f"{self.ncol}, {self.win_cond}, "
+            + f"{self.start_player})"
+        )
+        return rep
 
 
 class ConnectGame(Game):
@@ -96,7 +95,7 @@ class ConnectGame(Game):
         newgame.state = action(self.state)
         return newgame
 
-    def reward_player(self, player: ConnectPlayer = None):
+    def reward_player(self, player: int = None):
         """Returns a Result (1, 0, -1) corresponding to a win, draw or loss"""
         if player is None:
             player = self.state.current_player
@@ -117,21 +116,21 @@ class ConnectGame(Game):
             for i, x in enumerate(self.state.board[0, :])
         ]
 
-    def _h_check(self, p: ConnectPlayer, n: int):
+    def _h_check(self, p: int, n: int):
         """Check for n pieces belonging to p in a horizontal line"""
         for i in range(self.cfg.nrow):
             for j in range(self.cfg.ncol - (n - 1)):
                 if all(self.state.board[i, j + x] == p for x in range(n)):
                     return True
 
-    def _v_check(self, p: ConnectPlayer, n: int):
+    def _v_check(self, p: int, n: int):
         """Check for n pieces belonging to p in a vertical line"""
         for i in range(self.cfg.nrow - (n - 1)):
             for j in range(self.cfg.ncol):
                 if all(self.state.board[i + x, j] == p for x in range(n)):
                     return True
 
-    def _d_check(self, p: ConnectPlayer, n: int):
+    def _d_check(self, p: int, n: int):
         """Check for n pieces belonging to p in a diagonal line"""
         # Ascending diagonal check
         for i in range(self.cfg.nrow - (n - 1)):
@@ -144,7 +143,7 @@ class ConnectGame(Game):
                 if all(self.state.board[i + x, j + x] == p for x in range(n)):
                     return True
 
-    def check_winner(self, p: ConnectPlayer):
+    def check_winner(self, p: int):
         """Check if player p has won"""
         if self.state.current_player != p:
             p = -1
@@ -186,5 +185,8 @@ class ConnectGame(Game):
         # self.state.current_player = encoded[0, 0, 2]
         pass
 
-    def __repr__(self):
+    def __str__(self):
         return f"{self.state}\nWin condition: {self.cfg.win_cond}"
+
+    def __repr__(self) -> str:
+        return f"ConnectGame({self.cfg!r}, {self.state!r})"

@@ -24,7 +24,8 @@ class Trainer:
             Number of CPUs to use during self play. `None` means 1 unless in a
             :obj:`joblib.parallel_backend` context. `-1` means using all processors.
         """
-        self.model = model
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.model = model.to(self.device)
         self.game = game
         self.mcts = MCTS(game, self.model)
         self.n_jobs = parallel.effective_n_jobs(n_jobs)
@@ -216,14 +217,6 @@ class Trainer:
             f"Total Loss:\t{total_loss/(epoch*batch_size)}",
             sep="\n\t",
         )
-
-    def loss_pi(self, targets, outputs) -> torch.FloatTensor:
-        loss = -(targets * torch.log(outputs)).sum(dim=1)
-        return loss.mean()
-
-    def loss_v(self, targets, outputs) -> torch.FloatTensor:
-        loss = torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
-        return loss
 
     def save_checkpoint(self, folder, filename):
         if not os.path.exists(folder):

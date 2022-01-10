@@ -1,5 +1,7 @@
+from typing import Tuple
 import torch
 from torch import nn
+from torch.functional import Tensor
 import torch.nn.functional as F
 
 import numpy as np
@@ -60,7 +62,7 @@ class OutBlock(nn.Module):
         self.logsoftmax = nn.LogSoftmax(dim=1)
         self.fc = nn.Linear(in_x * in_y * 32, action_size)
 
-    def forward(self, s: torch.Tensor):
+    def forward(self, s: torch.Tensor) -> Tuple[Tensor, Tensor]:
         # batch_size * n_channels * width * height
         v = F.relu(self.bn(self.conv(s)))  # value head
         v = v.view(-1, self.n_channels * self.in_x * self.in_y)
@@ -77,25 +79,25 @@ class OutBlock(nn.Module):
 class C4Zero(nn.Module):
     """Connect-N solving network"""
 
-    def __init__(self, n_channels, in_x, in_y, action_size):
+    def __init__(self, n_channels, in_x, in_y, action_size, device="cpu"):
         super(C4Zero, self).__init__()
+        self.device = device
         self.conv = ConvBlock(n_channels, in_x, in_y)
         for block in range(19):
             setattr(self, "res_%i" % block, ResBlock())
         self.outblock = OutBlock(n_channels, in_x, in_y, action_size)
 
-    def forward(self, s):
+    def forward(self, s: torch.Tensor):
         # Pass through conv block
         s = self.conv(s)
         # Pass through each residual block in order
         for block in range(19):
             s = getattr(self, "res_%i" % block)(s)
         # Pass through output block
-        s = self.outblock(s)
-        return s
+        return self.outblock(s)
 
-    def predict(self, X: np.ndarray):
-        s = torch.FloatTensor(X)
+    def predict(self, X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        s = torch.FloatTensor(X).to(self.device)
         self.eval()
         with torch.no_grad():
             policy, value = self.forward(s)

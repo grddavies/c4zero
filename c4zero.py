@@ -1,10 +1,10 @@
 from typing import Tuple
-import torch
-from torch import nn
-from torch.functional import Tensor
-import torch.nn.functional as F
 
 import numpy as np
+import torch
+import torch.nn.functional as F
+from torch import nn
+from torch.functional import Tensor
 
 
 class ConvBlock(nn.Module):

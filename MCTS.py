@@ -94,9 +94,17 @@ class Node:
 class MCTS:
     """Class to perform a Monte Carlo Tree Search"""
 
+    game: Game
+    model: C4Zero
+    _Ps: Dict[int, np.ndarray]
+    _vs: Dict[int, float]
+
     def __init__(self, game: Game, model: C4Zero):
         self.game = game
         self.model = model
+        # Cache for prediction values
+        self._Ps = {}
+        self._vs = {}
 
     def run(self, n_simulations):
         """Run Monte Carlo Tree Search"""
@@ -104,7 +112,8 @@ class MCTS:
         root = Node(0, self.game)
         # Expand root
         # Get policy, value from model
-        action_probs, value = self.model.predict(root.game.encode())
+        action_probs, _ = self.cached_predict(root)
+
         root.expand(action_probs)
 
         # Simulate gameplay from this position
@@ -120,8 +129,9 @@ class MCTS:
             value = node.game.reward_player()
             if value is None:  # Game not over
                 # Expand & Evaluate
-                # TODO: Randomly reflect/rotate board along symmetry line here
-                action_probs, value = self.model.predict(node.game.encode())
+                # TODO: Randomly reflect/rotate board along game symmetry line here
+                # See Methods: Expand and Evaluate
+                action_probs, value = self.cached_predict(node)
                 node.expand(action_probs)
             # Backup
             self.backpropagate(search_path, value, node.game.state.current_player)
@@ -140,3 +150,10 @@ class MCTS:
                 value if node.game.state.current_player == current_player else -value
             )
             node._visit_count += 1
+
+    def cached_predict(self, node: Node):
+        """Predict policy at a given node and cache the result"""
+        s = node.game.state.hash()
+        if s not in self._Ps:
+            self._Ps[s], self._vs[s] = self.model.predict(node.game.encode())
+        return self._Ps[s], self._vs[s]

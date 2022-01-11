@@ -22,7 +22,10 @@ class GameState(ABC):
     """Class to represent a games state"""
     current_player: int
     board: np.ndarray
-    pass
+
+    @abstractmethod
+    def hash(self) -> Hashable:
+        pass
 
 
 class Action(ABC):

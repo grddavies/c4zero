@@ -11,6 +11,9 @@ class ConnectGameState(
     board: np.ndarray
     current_player: int
 
+    def hash(self):
+        return str(self.board)
+
     def __str__(self) -> str:
         return f"{self.board}\nCurrent player: {self.current_player}"
 

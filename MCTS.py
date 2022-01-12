@@ -1,4 +1,4 @@
-from math import sqrt
+import math
 from typing import Dict, List
 
 import numpy as np
@@ -8,6 +8,9 @@ from game.base import Game, Player
 
 
 class Node:
+    pb_c_base: int = 19652
+    pb_c_init: float = 1.25
+
     def __init__(self, prior: float, game: Game):
         self.prior = prior  # prob of selecting node
         self.value_sum = 0  # total value from all visits
@@ -72,12 +75,38 @@ class Node:
                 continue
             self.children[a] = Node(prob, self.game.move(actions[a]))
 
-    def ucb_score(self, child: "Node", c_puct: float = 1.0):
+    def ucb_score(self, child: "Node"):
         """Calculate the upper confidence bound score between nodes"""
-        prior_score = c_puct * child.prior * sqrt(self.n) / (child.n + 1)
+        # Exploration bonus based on prior score
+        c_puct = (
+            math.log((self.n + self.pb_c_base + 1) / self.pb_c_base) + self.pb_c_init
+        )
+        c_puct *= math.sqrt(self.n) / (child.n + 1)
+        prior_score = c_puct * child.prior
         # The value of the child is from the perspective of the opposing player
         value_score = -child.value
         return value_score + prior_score
+
+    def add_exploration_noise(self, alpha=0.3, e_frac=0.25):
+        """
+        Add Dirichlet noise to a Node's priors to increase exploratory behaviour
+
+        Parameters
+        ----------
+
+        alpha: float (default = 0.3)
+            The shape of the gamma distribution. Must be positive.
+
+        e_frac: float (default = 0.25)
+            The exploration fraction - how much noise to apply to the priors
+        """
+        if not self.expanded:
+            raise UserWarning("Cannot add noise to Node before expansion")
+        actions = self.children.keys()
+        noise = np.random.gamma(alpha, 1, len(actions))
+        for a, n in zip(actions, noise):
+            self.children[a].prior = self.children[a].prior * (1 - e_frac) + n * e_frac
+        return self
 
     def __str__(self):
         """Pretty print node info"""
@@ -106,15 +135,20 @@ class MCTS:
         self._Ps = {}
         self._vs = {}
 
-    def run(self, n_simulations):
+    def run(
+        self,
+        n_simulations: int,
+        root_dirichlet_alpha: float = 0.3,
+        root_explore_frac: float = 0.25,
+    ):
         """Run Monte Carlo Tree Search"""
-
         root = Node(0, self.game)
         # Expand root
         # Get policy, value from model
         action_probs, _ = self.cached_predict(root)
 
         root.expand(action_probs)
+        root.add_exploration_noise(root_dirichlet_alpha, root_explore_frac)
 
         # Simulate gameplay from this position
         for _ in range(n_simulations):

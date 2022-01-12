@@ -3,8 +3,8 @@ from typing import Dict
 import joblib
 from joblib.parallel import delayed
 
-from game.game import Game, Player
-from game.util import ProgressParallel
+from game.base import Game, Player
+from util import ProgressParallel
 
 
 class Arena:

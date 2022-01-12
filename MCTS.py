@@ -4,7 +4,7 @@ from typing import Dict, List
 import numpy as np
 
 from c4zero import C4Zero
-from game.game import Game, Player
+from game.base import Game, Player
 
 
 class Node:
@@ -134,13 +134,12 @@ class MCTS:
                 action_probs, value = self.cached_predict(node)
                 node.expand(action_probs)
             # Backup
-            self.backpropagate(search_path, value, node.game.state.current_player)
+            MCTS.backpropagate(search_path, value, node.game.state.current_player)
 
         return root
 
-    def backpropagate(
-        self, search_path: List[Node], value: float, current_player: Player
-    ):
+    @staticmethod
+    def backpropagate(search_path: List[Node], value: float, current_player: Player):
         """
         At the end of a simulation, we propagate the evaluation all the way up the tree
         to the root.

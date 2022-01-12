@@ -77,10 +77,12 @@ class OutBlock(nn.Module):
 
 
 class C4Zero(nn.Module):
-    """Connect-N solving network"""
+    """Connect-4 solving network"""
+    device: torch.device
 
-    def __init__(self, n_channels, in_x, in_y, action_size, device="cpu"):
+    def __init__(self, device="cpu"):
         super(C4Zero, self).__init__()
+        n_channels, in_x, in_y, action_size = 1, 6, 7, 7
         self.device = device
         self.conv = ConvBlock(n_channels, in_x, in_y)
         for block in range(19):
@@ -102,6 +104,13 @@ class C4Zero(nn.Module):
         with torch.no_grad():
             policy, value = self.forward(s)
         return policy.numpy(), value.numpy()
+
+    def clone(self):
+        return C4Zero(self.device)
+
+    def to(self, device: torch.device):
+        self.device = device
+        return super(C4Zero, self).to(device)
 
 
 class AlphaLoss(nn.Module):

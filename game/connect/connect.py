@@ -2,7 +2,7 @@ from collections import namedtuple
 from typing import List
 
 import numpy as np
-from game.game import Action, Game, GameConfig, GameState, Result
+from game.base import Action, Game, GameConfig, GameState, Result
 
 
 class ConnectGameState(

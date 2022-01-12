@@ -1,11 +1,13 @@
 from typing import Any
 
-from joblib import Parallel
+import joblib
 from tqdm.auto import tqdm
 
 
 class EasyDict(dict):
-    """Convenience class that behaves like a dict but allows access with the attribute syntax."""
+    """
+    Convenience class that behaves like a dict but allows access with the attribute syntax.
+    """
 
     def __getattr__(self, name: str) -> Any:
         try:
@@ -20,7 +22,8 @@ class EasyDict(dict):
         del self[name]
 
 
-class ProgressParallel(Parallel):
+class ProgressParallel(joblib.Parallel):
+    """joblib Parallel with additional args to pass to tqdm progress bar"""
     def __init__(self, use_tqdm=True, total=None, leave=True, *args, **kwargs):
         self._use_tqdm = use_tqdm
         self._total = total
@@ -31,7 +34,7 @@ class ProgressParallel(Parallel):
         with tqdm(
             disable=not self._use_tqdm, total=self._total, leave=self._leave
         ) as self._pbar:
-            return Parallel.__call__(self, *args, **kwargs)
+            return super(ProgressParallel, self).__call__(*args, **kwargs)
 
     def print_progress(self):
         if self._total is None:

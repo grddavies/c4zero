@@ -1,6 +1,6 @@
 import numpy as np
 
-from game.connect.connect import ConnectGame, ConnectGameConfig, DropPiece
+from game.connect import ConnectGame, ConnectGameConfig, DropPiece
 
 
 class TestConnectGame:

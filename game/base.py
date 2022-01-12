@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod, abstractproperty
 from enum import IntEnum
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Hashable, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 from torch.utils.data import Dataset

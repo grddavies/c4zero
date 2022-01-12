@@ -1,17 +1,18 @@
-import os
 from typing import List, Tuple
 
+import joblib
 import numpy as np
 import torch
 import torch.optim as optim
-from joblib import delayed, parallel
 from torch import nn
 from torch.utils.data import DataLoader
 
+from arena import Arena
 from c4zero import C4Zero
-from game.game import Game, GamePlayDataset, GameState
-from game.util import ProgressParallel
+from game.base import Game, GamePlayDataset, GameState
+from game.connect.connect_players import AIConnectPlayer
 from MCTS import MCTS
+from util import ProgressParallel
 
 
 class Trainer:
@@ -26,9 +27,10 @@ class Trainer:
         """
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
+        self.best_model = None
         self.game = game
         self.mcts = MCTS(game, self.model)
-        self.n_jobs = parallel.effective_n_jobs(n_jobs)
+        self.n_jobs = joblib.parallel.effective_n_jobs(n_jobs)
 
     def execute_episode(
         self, n_simulations: int = 100, t_mcts: float = 1.0, t_move_thresh: int = 8
@@ -147,7 +149,7 @@ class Trainer:
         flip_hv: bool = False,
     ):
         """
-        Run games of self play and store output as a dataset
+        Run games of self play and return output as a dataset
 
         n_eps: int
             Number of games to play
@@ -166,7 +168,7 @@ class Trainer:
 
         """
         data = ProgressParallel(self.n_jobs, total=n_eps, leave=False)(
-            delayed(self.execute_episode)(n_sim, t_mcts, t_move_thresh)
+            joblib.delayed(self.execute_episode)(n_sim, t_mcts, t_move_thresh)
             for _ in range(n_eps)
         )
         return GamePlayDataset(

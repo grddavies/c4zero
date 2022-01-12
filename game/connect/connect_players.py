@@ -1,6 +1,6 @@
 import numpy as np
-from game.connect.connect import ConnectGame, DropPiece
-from game.game import Player
+from .connect import ConnectGame, DropPiece
+from game.base import Player
 from c4zero import C4Zero
 from MCTS import MCTS
 

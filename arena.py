@@ -43,14 +43,15 @@ class Arena:
         """
         Execute n_games, swapping starting player after for half the games
         """
-        n_games_per_half = n_games // 2
-        res1 = ProgressParallel(self.n_jobs, total=n_games_per_half, leave=False)(
-            delayed(self.play_game)() for _ in range(n_games_per_half)
+        n_games1 = n_games // 2
+        n_games2 = n_games - n_games1
+        res1 = ProgressParallel(self.n_jobs, total=n_games1, leave=False)(
+            delayed(self.play_game)() for _ in range(n_games1)
         )
         # Switch starting player
         self.game.cfg.start_player *= -1
-        res2 = ProgressParallel(self.n_jobs, total=n_games_per_half, leave=False)(
-            delayed(self.play_game)() for _ in range(n_games_per_half)
+        res2 = ProgressParallel(self.n_jobs, total=n_games2, leave=False)(
+            delayed(self.play_game)() for _ in range(n_games2)
         )
         res = res1 + res2
         return res.count(1), res.count(-1), res.count(0)

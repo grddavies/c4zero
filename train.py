@@ -11,6 +11,7 @@ from c4zero import C4Zero
 from game.connect import ConnectGame, ConnectGameConfig
 from trainer import Trainer
 
+#  python train.py --outdir=training --batch=256 --n_eps=150 --n_sim=200 --n_iters=10
 
 @click.command()
 # Required:
@@ -47,18 +48,19 @@ def main(**kwargs):
     c4_game = ConnectGame(c4_cfg)
     model = C4Zero()
     trainer = Trainer(c4_game, model, n_jobs=-1)
+    log_path = os.path.join(run_dir, "log.txt")
     for i in range(1, opts.n_iters + 1):
         print(f"[{i}/{opts.n_iters}]")
         print(f"\tExecuting self-play for {opts.n_eps} episodes...")
         training_data = trainer.selfplay(opts.n_eps, opts.n_sim)
         torch.save(training_data, os.path.join(opts.outdir, f"{i:02d}_traindata.pt"))
         print(f"\tTraining for {opts.epochs} epochs...")
-        with open('log.txt', 'a') as f:
+        with open(log_path, 'a') as f:
             with contextlib.redirect_stdout(f):
                 trainer.train(training_data, epochs=opts.epochs, batch_size=opts.batch)
                 print("\tEvaluating new model...")
         w, l, d = trainer.evaluate(n_games=opts.n_eps, win_frac=opts.eval)
-        with open("log.txt", mode="a") as f:
+        with open(log_path, mode="a") as f:
             f.write(f"\nNew model: W:{w:d} L:{l:d} D: {d:d}\n")
 
         if not i % opts.snap:

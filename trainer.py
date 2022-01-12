@@ -27,7 +27,7 @@ class Trainer:
         """
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
-        self.best_model = None
+        self.best_model = self.model.clone()
         self.game = game
         self.mcts = MCTS(game, self.model)
         self.n_jobs = joblib.parallel.effective_n_jobs(n_jobs)
@@ -129,13 +129,15 @@ class Trainer:
         n_sim: int (default = 100)
             Number of simulations to run during MCTS
         """
+        self.best_model = self.model.clone()
         for i in range(1, n_iters + 1):
-            # TODO: NNet comparison during training
             print(f"[{i}/{n_iters}]")
             print(f"\tExecuting self-play for {n_eps} episodes...")
             traindata = self.selfplay(n_eps, n_sim)
             print("\tTraining...")
             self.train(traindata, epochs=epochs, batch_size=batch_size)
+            print("Evaluating...")
+            self.evaluate(n_eps//2)
         return self
 
     def selfplay(
@@ -176,16 +178,23 @@ class Trainer:
         )
 
     def train(self, traindata: GamePlayDataset, epochs: int = 5, batch_size: int = 64):
-        # TODO: add lr scheduler
-        optimizer = optim.Adam(self.model.parameters(), lr=5e-4)
+        optimizer = optim.Adam(self.model.parameters(), lr=5e-4, weight_decay=1e-4)
+
+        # # Settings recreate the 2017 paper:
+        # optimizer = optim.SGD(
+        #     self.model.parameters(), lr=1e-2, momentum=0.9, weight_decay=1e-4
+        # )
+        # lr_scheduler = optim.lr_scheduler.MultiStepLR(
+        #     optimizer, milestones=[400, 600, 800], gamma=0.1
+        # )
         criterion_p, criterion_v = nn.CrossEntropyLoss(), nn.MSELoss()
         dataloader = DataLoader(traindata, batch_size=batch_size, shuffle=True)
         self.model.train()
         total_loss = running_v_loss = running_p_loss = 0.0
         action_size = self.game.get_action_space()
         for epoch in range(1, epochs + 1):
-            for i, data in enumerate(dataloader, 0):
-                boards, target_ps, target_vs = data
+            for i, minibatch in enumerate(dataloader):
+                boards, target_ps, target_vs = minibatch
                 # NOTE: Boards are encoded as: (batch_size, nchannel, width, height) to
                 # ensure compatibility with conv2d layers
                 boards = boards.float().view(
@@ -207,6 +216,7 @@ class Trainer:
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+                # lr_scheduler.step()
 
                 running_v_loss += v_loss.item()
                 running_p_loss += p_loss.item()
@@ -219,9 +229,23 @@ class Trainer:
             f"Total Loss:\t{total_loss/(epoch*batch_size)}",
             sep="\n\t",
         )
+        return self
 
-    def save_checkpoint(self, folder, filename):
-        if not os.path.exists(folder):
-            os.mkdir(folder)
-        filepath = os.path.join(folder, filename)
-        torch.save({"state_dict": self.model.state_dict()}, filepath)
+    def evaluate(self, n_games=400, win_frac=0.55):
+        """Compare current model agains best model"""
+        p1 = AIConnectPlayer(self.model, n_sim=150)
+        p2 = AIConnectPlayer(self.best_model, n_sim=150)
+        arena = Arena(p1, p2, self.game, self.n_jobs)
+        w, l, d = arena.play_games(n_games)
+        if w / sum((w, l, d)) > win_frac:
+            self.best_model = self.model.clone()
+        else:
+            self.model = self.best_model.clone()
+        return w, l, d
+
+    def save_checkpoint(self, filename):
+        torch.save({"state_dict": self.model.state_dict()}, filename)
+
+    def load_checkpoint(self, filepath):
+        checkpoint = torch.load(filepath)
+        self.model.load_state_dict(checkpoint["state_dict"])

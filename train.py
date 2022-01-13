@@ -1,8 +1,8 @@
-import contextlib
+import glob
 import json
+import logging
 import os
 import re
-import logging
 
 import click
 import torch
@@ -76,10 +76,12 @@ def main(**kwargs):
 
     # TODO: Allow loading progress from saved
     if opts.resume is not None:
-        # Is filepath or is latest?
-        pass
-    else:
-        pass
+        if opts.resume == "latest":
+            models = glob.glob(os.path.join(outdir, prev_run_dirs[-1], "model_*.pt"))
+            logger.info(f"Resuming from {models[-1]}")
+            trainer.load_checkpoint(models[-1])
+        else:
+            raise ValueError(f"Unknown option for --resume: {opts.resume}")
 
     # Training loop
     for i in range(1, opts.n_iters + 1):

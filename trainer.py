@@ -1,3 +1,4 @@
+import logging
 from typing import List, Tuple
 
 import joblib
@@ -13,6 +14,8 @@ from game.base import Game, GamePlayDataset, GameState
 from game.connect.connect_players import AIConnectPlayer
 from MCTS import MCTS
 from util import ProgressParallel
+
+logger = logging.getLogger(__name__)
 
 
 class Trainer:
@@ -137,7 +140,7 @@ class Trainer:
             print("\tTraining...")
             self.train(traindata, epochs=epochs, batch_size=batch_size)
             print("Evaluating...")
-            self.evaluate(n_eps//2)
+            self.evaluate(n_eps // 2)
         return self
 
     def selfplay(
@@ -222,13 +225,10 @@ class Trainer:
                 running_p_loss += p_loss.item()
                 total_loss += loss.item()
         # Print summary at end of iter
-        print(
-            f"\t[{epoch:d}, {batch_size:2d}]",
-            f"Policy Loss:\t{running_p_loss/(epoch*batch_size)}",
-            f"Value Loss:\t{running_v_loss/(epoch*batch_size)}",
-            f"Total Loss:\t{total_loss/(epoch*batch_size)}",
-            sep="\n\t",
-        )
+        logger.info(f"[{epoch:d}, {batch_size}]")
+        logger.info(f"Policy Loss:\t{running_p_loss/(epoch*batch_size)}")
+        logger.info(f"Value Loss:\t{running_v_loss/(epoch*batch_size)}")
+        logger.info(f"Total Loss:\t{total_loss/(epoch*batch_size)}")
         return self
 
     def evaluate(self, n_games=400, win_frac=0.55):
@@ -237,11 +237,13 @@ class Trainer:
         p2 = AIConnectPlayer(self.best_model, n_sim=150)
         arena = Arena(p1, p2, self.game, self.n_jobs)
         w, l, d = arena.play_games(n_games)
+        logger.info(f"New model: W:{w:d} L:{l:d} D: {d:d}")
         if w / sum((w, l, d)) > win_frac:
             self.best_model = self.model.clone()
-        else:
-            self.model = self.best_model.clone()
-        return w, l, d
+            return True
+        # If model wins =< win_frac, continue training from best model
+        self.model = self.best_model.clone()
+        return False
 
     def save_checkpoint(self, filename):
         torch.save({"state_dict": self.model.state_dict()}, filename)

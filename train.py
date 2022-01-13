@@ -56,7 +56,6 @@ def main(**kwargs):
     # Set up logging
     log_path = os.path.join(run_dir, "log.txt")
     logging.basicConfig(
-        encoding='utf-8',
         level=logging.INFO,
         handlers=[
             logging.StreamHandler(),

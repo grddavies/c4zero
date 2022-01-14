@@ -203,8 +203,8 @@ class Trainer:
                 boards = boards.float().view(
                     -1, 1, self.game.cfg.nrow, self.game.cfg.ncol
                 )
-                target_ps = target_ps.float().view(-1, action_size)
-                target_vs = target_vs.float().view(-1, 1)
+                target_ps = target_ps.float().view(-1, action_size).to(self.device)
+                target_vs = target_vs.float().view(-1, 1).to(self.device)
 
                 # Predict
                 out_ps, out_vs = self.model(boards)

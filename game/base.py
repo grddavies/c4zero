@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Hashable, Iterable, List, Optional, Tuple, Union
 
@@ -35,6 +35,8 @@ class Action(ABC):
 
 
 class GameConfig(ABC):
+    nrow: int
+    ncol: int
     pass
 
 
@@ -56,6 +58,8 @@ class Game(ABC):
     @abstractmethod
     def get_valid_actions(self) -> List[Union["Action", None]]:
         """Return list of legal actions based on current state"""
+        # TODO: change to specify List[Tuple(idx: int, action: Action)]
+        # We don't want NoneTypes creeping in here
         pass
 
     @abstractmethod
@@ -63,7 +67,8 @@ class Game(ABC):
         """Perform a move and return a Game with the next state"""
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def over(self) -> bool:
         """Has game reached an end-scenario?"""
         pass

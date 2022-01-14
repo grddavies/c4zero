@@ -29,8 +29,10 @@ class Trainer:
             :obj:`joblib.parallel_backend` context. `-1` means using all processors.
         """
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model = model.to(self.device)
+        self.model = model
+        self.model.to(self.device)
         self.best_model = self.model.clone()
+        self.best_model.to(self.device)
         self.game = game
         self.mcts = MCTS(game, self.model)
         self.n_jobs = joblib.parallel.effective_n_jobs(n_jobs)
@@ -202,9 +204,9 @@ class Trainer:
                 # ensure compatibility with conv2d layers
                 boards = boards.float().view(
                     -1, 1, self.game.cfg.nrow, self.game.cfg.ncol
-                )
-                target_ps = target_ps.float().view(-1, action_size)
-                target_vs = target_vs.float().view(-1, 1)
+                ).to(self.device)
+                target_ps = target_ps.float().view(-1, action_size).to(self.device)
+                target_vs = target_vs.float().view(-1, 1).to(self.device)
 
                 # Predict
                 out_ps, out_vs = self.model(boards)

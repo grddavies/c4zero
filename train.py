@@ -73,7 +73,7 @@ def main(**kwargs):
     trainer = Trainer(c4_game, C4Zero(), n_jobs=-1)
     logger.info(f"training on {trainer.device} for {opts.n_iters} iters")
 
-    # TODO: Allow loading progress from saved
+    # TODO: Allow loading progress from specific saved model
     if opts.resume is not None:
         if opts.resume == "latest":
             models = glob.glob(os.path.join(outdir, prev_run_dirs[-1], "model_*.pt"))

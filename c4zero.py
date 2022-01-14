@@ -83,11 +83,12 @@ class C4Zero(nn.Module):
     def __init__(self, device="cpu"):
         super(C4Zero, self).__init__()
         n_channels, in_x, in_y, action_size = 1, 6, 7, 7
-        self.device = device
         self.conv = ConvBlock(n_channels, in_x, in_y)
         for block in range(19):
             setattr(self, "res_%i" % block, ResBlock())
         self.outblock = OutBlock(n_channels, in_x, in_y, action_size)
+        self.device = device
+        self.to(self.device)
 
     def forward(self, s: torch.Tensor):
         # Pass through conv block
@@ -103,7 +104,7 @@ class C4Zero(nn.Module):
         self.eval()
         with torch.no_grad():
             policy, value = self.forward(s)
-        return policy.numpy(), value.numpy()
+        return policy.cpu().numpy(), value.cpu().numpy()
 
     def clone(self):
         return C4Zero(self.device)

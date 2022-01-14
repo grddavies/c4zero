@@ -17,7 +17,7 @@ class ConvBlock(nn.Module):
         self.conv1 = nn.Conv2d(n_channels, 128, 3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(128)
 
-    def forward(self, s: torch.FloatTensor):
+    def forward(self, s: torch.Tensor):
         # batch_size * n_channels * width * height
         s = s.view(-1, self.n_channels, self.in_x, self.in_y)
         return F.relu(self.bn1(self.conv1(s)))

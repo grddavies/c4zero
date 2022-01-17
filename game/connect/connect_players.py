@@ -19,10 +19,10 @@ class HumanConnectPlayer(Player):
         actions = game.get_valid_actions()
         while True:
             print(self.to_readable_board(game.state.board))
+            selected = input(
+                "Select a column to place a piece into (zero-indexed): "
+            )
             try:
-                selected = input(
-                    "Select a column to place a piece into (zero-indexed): "
-                )
                 move = actions[int(selected)]
                 if move is None:
                     print(f"Can't do that move: {selected}")

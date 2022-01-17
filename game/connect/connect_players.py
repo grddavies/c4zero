@@ -25,7 +25,7 @@ class HumanConnectPlayer(Player):
                 )
                 move = actions[int(selected)]
                 if move is None:
-                    print("Can't do that move: {selected}")
+                    print(f"Can't do that move: {selected}")
                 else:
                     return move
             except (IndexError, ValueError):

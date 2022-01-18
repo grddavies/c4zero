@@ -53,13 +53,11 @@ class Node:
 
     def select_child(self):
         """Select the child with the highest UCB score"""
-        best_score = -np.inf
-        best_child = None
-        for child in self.children.values():
-            score = self.ucb_score(child)
-            if score > best_score:
-                best_score = score
-                best_child = child
+        if not self.expanded:
+            raise UserWarning("Node not expanded, cannot select a child")
+        children_scores = [(self.ucb_score(c), c) for c in self.children.values()]
+        max_score = max(score for score, c in children_scores)
+        best_child = next(c for score, c in children_scores if score == max_score)
         return best_child
 
     def expand(self, action_probs: np.ndarray):

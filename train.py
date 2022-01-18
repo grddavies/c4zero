@@ -60,7 +60,8 @@ def main(**kwargs):
         handlers=[
             logging.StreamHandler(),
             logging.FileHandler(log_path)
-        ]
+        ],
+        format="%(asctime)s | %(levelname)-7s | %(name)s - %(message)s"
     )
     logger = logging.getLogger()
 

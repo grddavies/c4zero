@@ -70,14 +70,19 @@ class Node:
         """
         Expand a node and keep track of the prior policy probability
         """
+        # tuples of idx and Action
         actions = self.game.get_valid_actions()
-        valid_actions = [action is not None for action in actions]
+        # Get action space and put 1s where idx in actions(a, _)
+        valid_idx = [i for i, _ in actions]
+        valid_actions = np.zeros(self.game.get_action_space(), dtype=int)
+        valid_actions[valid_idx] = 1
         action_probs = action_probs * valid_actions  # Mask invalid moves
         action_probs /= np.sum(action_probs)  # Normalise new probs
-        for a, prob in enumerate(action_probs.flatten()):
+        for idx, prob in enumerate(action_probs.flatten()):
             if prob == 0:
                 continue
-            self.children[a] = Node(prob, self.game.move(actions[a]))
+            action = self.game.get_action(idx)
+            self.children[idx] = Node(prob, self.game.move(action))
 
     def ucb_score(self, child: "Node"):
         """Calculate the upper confidence bound score between nodes"""

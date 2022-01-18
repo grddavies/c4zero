@@ -84,7 +84,7 @@ class Trainer:
             else:
                 tau = 0
             action_index = root.select_action(temperature=tau)
-            action = root.game.get_valid_actions()[action_index]
+            action = root.game.get_action(action_index)
             # Update the starting state in MCTS
             self.mcts.game = self.mcts.game.move(action)
             n_moves += 1
@@ -202,9 +202,11 @@ class Trainer:
                 boards, target_ps, target_vs = minibatch
                 # NOTE: Boards are encoded as: (batch_size, nchannel, width, height) to
                 # ensure compatibility with conv2d layers
-                boards = boards.float().view(
-                    -1, 1, self.game.cfg.nrow, self.game.cfg.ncol
-                ).to(self.device)
+                boards = (
+                    boards.float()
+                    .view(-1, 1, self.game.cfg.nrow, self.game.cfg.ncol)
+                    .to(self.device)
+                )
                 target_ps = target_ps.float().view(-1, action_size).to(self.device)
                 target_vs = target_vs.float().view(-1, 1).to(self.device)
 

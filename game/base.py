@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import IntEnum
-from typing import Hashable, Iterable, List, Optional, Tuple, Union
+from typing import Hashable, Iterable, List, Optional, Tuple
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -37,6 +37,11 @@ class Action(ABC):
 class GameConfig(ABC):
     nrow: int
     ncol: int
+    start_player: int
+    pass
+
+
+class InvalidActionError(Exception):
     pass
 
 
@@ -56,10 +61,18 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def get_valid_actions(self) -> List[Union["Action", None]]:
-        """Return list of legal actions based on current state"""
-        # TODO: change to specify List[Tuple(idx: int, action: Action)]
-        # We don't want NoneTypes creeping in here
+    def get_valid_actions(self) -> List[Tuple[int, "Action"]]:
+        """
+        Return list legal actions based on current state
+
+        First element of the tuple is the index of the action in the (flattened)
+        action space, the second is the Action itself
+        """
+        pass
+
+    @abstractmethod
+    def get_action(self, idx: int) -> Action:
+        """Return the action represented by that idx in the (flat) action space"""
         pass
 
     @abstractmethod

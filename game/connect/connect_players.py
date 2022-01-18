@@ -16,14 +16,13 @@ class HumanConnectPlayer(Player):
 
     def play(self, game: ConnectGame):
         print("Your move, you're 'O'")
-        actions = game.get_valid_actions()
         while True:
             print(self.to_readable_board(game.state.board))
             selected = input(
                 "Select a column to place a piece into (zero-indexed): "
             )
             try:
-                move = actions[int(selected)]
+                move = game.get_action(int(selected))
                 if move is None:
                     print(f"Can't do that move: {selected}")
                 else:
@@ -39,7 +38,7 @@ class RandomConnectPlayer(Player):
         self.verbose = verbose
 
     def play(self, game: ConnectGame):
-        actions = [a for a in game.get_valid_actions() if a is not None]
+        actions = [a for i, a in game.get_valid_actions()]
         action = np.random.choice(actions)
         if self.verbose:
             if isinstance(action, DropPiece):
@@ -70,5 +69,4 @@ class AIConnectPlayer(Player):
         move_index = root.select_action(temp)
         if self.verbose:
             print(f"AI moved in column {move_index}")
-        move = game.get_valid_actions()[move_index]
-        return move
+        return game.get_action(move_index)

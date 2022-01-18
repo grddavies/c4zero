@@ -1,8 +1,8 @@
 from collections import namedtuple
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
-from game.base import Action, Game, GameConfig, GameState, Result
+from game.base import Action, Game, GameConfig, GameState, InvalidActionError, Result
 
 
 class ConnectGameState(
@@ -113,11 +113,16 @@ class ConnectGame(Game):
     def get_action_space(self):
         return self.cfg.ncol
 
-    def get_valid_actions(self) -> List[Action]:
+    def get_valid_actions(self) -> List[Tuple[int, Action]]:
         return [
-            DropPiece(i) if x == 0 else None
-            for i, x in enumerate(self.state.board[0, :])
+            (i, DropPiece(i)) for i, x in enumerate(self.state.board[0, :]) if x == 0
         ]
+
+    def get_action(self, idx: int) -> Action:
+        try:
+            return next(a for i, a in self.get_valid_actions() if i == idx)
+        except StopIteration:
+            raise InvalidActionError(f"Invalid move at index {idx}")
 
     def _h_check(self, p: int, n: int):
         """Check for n pieces belonging to p in a horizontal line"""
@@ -173,7 +178,7 @@ class ConnectGame(Game):
 
     @property
     def board_full(self) -> bool:
-        return self.state.board.all()
+        return bool(self.state.board.all())
 
     def encode(self):
         # encoded = np.zeros([self.cfg.nrow, self.cfg.ncol, 3], dtype=int)

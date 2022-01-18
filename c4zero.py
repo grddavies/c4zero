@@ -99,7 +99,7 @@ class C4Zero(nn.Module):
         # Pass through output block
         return self.outblock(s)
 
-    def predict(self, X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def predict(self, X: np.ndarray) -> Tuple[np.ndarray, float]:
         s = torch.FloatTensor(X).to(self.device)
         self.eval()
         with torch.no_grad():

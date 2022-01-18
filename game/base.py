@@ -74,8 +74,12 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def reward_player(self, player: int) -> Optional[Result]:
-        """Returns a Result (1, 0, -1) corresponding to a win, draw or loss"""
+    def reward_player(self, player: int = None) -> Optional[Result]:
+        """
+        Returns a Result (1, 0, -1) corresponding to a win, draw or loss
+
+        Defaults to rewarding the current player
+        """
         pass
 
     @abstractmethod

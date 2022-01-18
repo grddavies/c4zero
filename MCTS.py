@@ -1,20 +1,26 @@
 import math
-from typing import Dict, List
+from typing import Dict, Hashable, List
 
 import numpy as np
 
 from c4zero import C4Zero
-from game.base import Game, Player
+from game.base import Game
 
 
 class Node:
     pb_c_base: int = 19652
     pb_c_init: float = 1.25
 
+    prior: float
+    value_sum: float
+    children: Dict[int, "Node"]
+    game: Game
+    _visit_count: int
+
     def __init__(self, prior: float, game: Game):
         self.prior = prior  # prob of selecting node
         self.value_sum = 0  # total value from all visits
-        self.children: Dict[int, "Node"] = {}  # legal child positions
+        self.children = {}  # legal child positions
         self.game = game
         self._visit_count = 0
 
@@ -123,8 +129,8 @@ class MCTS:
 
     game: Game
     model: C4Zero
-    _Ps: Dict[int, np.ndarray]
-    _vs: Dict[int, float]
+    _Ps: Dict[Hashable, np.ndarray]
+    _vs: Dict[Hashable, float]
 
     def __init__(self, game: Game, model: C4Zero):
         self.game = game
@@ -171,7 +177,7 @@ class MCTS:
         return root
 
     @staticmethod
-    def backpropagate(search_path: List[Node], value: float, current_player: Player):
+    def backpropagate(search_path: List[Node], value: float, current_player: int):
         """
         At the end of a simulation, we propagate the evaluation all the way up the tree
         to the root.

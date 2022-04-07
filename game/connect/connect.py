@@ -1,21 +1,25 @@
-from collections import namedtuple
 from typing import List, Tuple
 
 import numpy as np
 from game.base import Action, Game, GameConfig, GameState, InvalidActionError, Result
 
 
-class ConnectGameState(
-    GameState, namedtuple("ConnectGameState", ("board", "current_player")),
-):
+class ConnectGameState(GameState):
     board: np.ndarray
     current_player: int
+
+    def __init__(self, board: np.ndarray, start_player: int) -> None:
+        self.board = board
+        self.current_player = start_player
 
     def hash(self):
         return str(self.board)
 
     def __str__(self) -> str:
         return f"{self.board}\nCurrent player: {self.current_player}"
+
+    def __repr__(self) -> str:
+        return f"ConnectGameState({self.board}, {self.current_player})"
 
 
 class DropPiece(Action):
@@ -26,6 +30,7 @@ class DropPiece(Action):
     def __init__(self, col: int):
         self.col = col
 
+    # FIXME: Tell type checker that classes inheriting from GameState are OK!
     def __call__(self, state: ConnectGameState):
         board = state.board.copy()
         if board[0][self.col] != 0:
@@ -79,9 +84,8 @@ class ConnectGame(Game):
 
     def __init__(self, cfg: ConnectGameConfig = ConnectGameConfig()):
         self.cfg = cfg
-        self.state = ConnectGameState(
-            np.zeros((cfg.nrow, cfg.ncol), dtype=int), cfg.start_player,
-        )
+        init_board = np.zeros((cfg.nrow, cfg.ncol), dtype=int)  # type: ignore
+        self.state = ConnectGameState(init_board, cfg.start_player,)
 
     @property
     def state(self) -> ConnectGameState:
@@ -98,10 +102,8 @@ class ConnectGame(Game):
         newgame.state = action(self.state)
         return newgame
 
-    def reward_player(self, player: int = None):
+    def reward_player(self, player: int):
         """Returns a Result (1, 0, -1) corresponding to a win, draw or loss"""
-        if player is None:
-            player = self.state.current_player
         if self.check_winner(player):
             return Result(1)
         if self.check_winner(-player):
@@ -109,6 +111,7 @@ class ConnectGame(Game):
         if self.board_full:
             # No winner and board full = draw
             return Result(0)
+        raise RuntimeError("Game not over")
 
     def get_action_space(self):
         return self.cfg.ncol

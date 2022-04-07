@@ -22,6 +22,7 @@ class Node:
         self.value_sum = 0  # total value from all visits
         self.children = {}  # legal child positions
         self.game = game
+        # TODO: remove prefix `_`
         self._visit_count = 0
 
     @property
@@ -170,8 +171,9 @@ class MCTS:
                 node = node.select_child()
                 search_path.append(node)
 
-            value = node.game.reward_player()
-            if value is None:  # Game not over
+            if node.game.over:
+                value = node.game.reward_player(node.game.state.current_player)
+            else:
                 # Expand & Evaluate
                 # TODO: Randomly reflect/rotate board along game symmetry line here
                 # See Methods: Expand and Evaluate

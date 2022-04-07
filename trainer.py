@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 import joblib
 import numpy as np
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class Trainer:
-    def __init__(self, game: Game, model: C4Zero, n_jobs: int = None):
+    def __init__(self, game: Game, model: C4Zero, n_jobs: Optional[int] = None):
         """
         Parameters
         ----------
@@ -92,7 +92,7 @@ class Trainer:
             if not self.mcts.game.over:
                 continue
             # Reward from the perspective of the current player at game end
-            reward = self.mcts.game.reward_player()
+            reward = self.mcts.game.reward_player(self.mcts.game.state.current_player)
             current_player = self.mcts.game.state.current_player
             # We return the board state, action probs from MCTS and the reward
             # from the current player's perspective
@@ -229,13 +229,13 @@ class Trainer:
                 running_p_loss += p_loss.item()
                 total_loss += loss.item()
         # Print summary at end of iter
-        logger.info(f"[{epoch:d}, {batch_size}]")
-        logger.info(f"Policy Loss:\t{running_p_loss/(epoch*batch_size)}")
-        logger.info(f"Value Loss:\t{running_v_loss/(epoch*batch_size)}")
-        logger.info(f"Total Loss:\t{total_loss/(epoch*batch_size)}")
+        logger.info(f"[{(1+epochs):d}, {batch_size}]")
+        logger.info(f"Policy Loss:\t{running_p_loss/((1+epochs)*batch_size)}")
+        logger.info(f"Value Loss:\t{running_v_loss/((1+epochs)*batch_size)}")
+        logger.info(f"Total Loss:\t{total_loss/((1+epochs)*batch_size)}")
         return self
 
-    def evaluate(self, n_games=400, win_frac=0.55):
+    def evaluate(self, n_games: int = 400, win_frac: float = 0.55):
         """Compare current model agains best model"""
         p1 = AIConnectPlayer(self.model, n_sim=150)
         p2 = AIConnectPlayer(self.best_model, n_sim=150)
@@ -249,9 +249,9 @@ class Trainer:
         self.model = self.best_model.clone()
         return False
 
-    def save_checkpoint(self, filename):
+    def save_checkpoint(self, filename: str):
         torch.save({"state_dict": self.model.state_dict()}, filename)
 
-    def load_checkpoint(self, filepath):
-        checkpoint = torch.load(filepath)
+    def load_checkpoint(self, filepath: str):
+        checkpoint: Dict[str, Any] = torch.load(filepath)
         self.model.load_state_dict(checkpoint["state_dict"])

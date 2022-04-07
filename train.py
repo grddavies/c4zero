@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+from typing import Any
 
 import click
 import torch
@@ -26,7 +27,7 @@ from trainer import Trainer
 @click.option('--resume',   help='Resume training from a previous run', metavar='[PATH|STR]',  type=str)
 @click.option('--mirror',   help='Reflect game board to augment training data', metavar='[BOOL]', type=bool, default=False, show_default=True)
 @click.option('--snap',     help='How frequently to save model checkpoints', metavar='ITERS', type=click.IntRange(min=1), default=1, show_default=True)
-def main(**kwargs):
+def main(**kwargs: Any):
     """
     Iteratively generate data through self-play, learn and evaluate new models
 

@@ -38,13 +38,13 @@ class Node:
             return 0
         return self.value_sum / self.n
 
-    def select_action(self, temperature):
+    def select_action(self, temperature: float):
         """
         Select an action from this node
 
         Actions are chosen according to the visit count distribution and temperature.
         """
-        visit_counts = np.array([child.n for child in self.children.values()])
+        visit_counts = np.array([child.n for child in self.children.values()])  # type: ignore
         actions = [action for action in self.children.keys()]
         if temperature == 0:
             action = actions[np.argmax(visit_counts)]
@@ -62,7 +62,7 @@ class Node:
         if not self.expanded:
             raise UserWarning("Node not expanded, cannot select a child")
         children_scores = [(self.ucb_score(c), c) for c in self.children.values()]
-        max_score = max(score for score, c in children_scores)
+        max_score = max(score for score, _ in children_scores)
         best_child = next(c for score, c in children_scores if score == max_score)
         return best_child
 
@@ -77,8 +77,9 @@ class Node:
         valid_actions = np.zeros(self.game.get_action_space(), dtype=int)
         valid_actions[valid_idx] = 1
         action_probs = action_probs * valid_actions  # Mask invalid moves
-        action_probs /= np.sum(action_probs)  # Normalise new probs
+        action_probs /= action_probs.sum()  # Normalise new probs
         for idx, prob in enumerate(action_probs.flatten()):
+            prob: float
             if prob == 0:
                 continue
             action = self.game.get_action(idx)
@@ -96,7 +97,7 @@ class Node:
         value_score = -child.value
         return value_score + prior_score
 
-    def add_exploration_noise(self, alpha=0.3, e_frac=0.25):
+    def add_exploration_noise(self, alpha: float = 0.3, e_frac: float = 0.25):
         """
         Add Dirichlet noise to a Node's priors to increase exploratory behaviour
 

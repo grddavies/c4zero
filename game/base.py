@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import IntEnum
-from typing import Hashable, Iterable, List, Optional, Tuple
+from typing import Hashable, Iterable, List, Tuple
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -53,7 +53,7 @@ class Game(ABC):
 
     def __init__(self, cfg: GameConfig) -> None:
         self.cfg = cfg
-        self.state: GameState
+        self._state: GameState
 
     @abstractmethod
     def get_action_space(self) -> int:
@@ -87,7 +87,7 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def reward_player(self, player: int = None) -> Optional[Result]:
+    def reward_player(self, player: int) -> Result:
         """
         Returns a Result (1, 0, -1) corresponding to a win, draw or loss
 
@@ -110,7 +110,7 @@ class Game(ABC):
         pass
 
 
-class GamePlayDataset(Dataset):
+class GamePlayDataset(Dataset[Tuple[np.ndarray, np.ndarray, float]]):
     def __init__(
         self,
         data: Iterable[Tuple[np.ndarray, np.ndarray, float]],
@@ -132,5 +132,5 @@ class GamePlayDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         return self.data[idx]

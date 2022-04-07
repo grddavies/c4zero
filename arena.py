@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 import joblib
 from joblib.parallel import delayed
@@ -53,5 +53,5 @@ class Arena:
         res2 = ProgressParallel(self.n_jobs, total=n_games2, leave=False)(
             delayed(self.play_game)() for _ in range(n_games2)
         )
-        res = res1 + res2
+        res: List[int] = res1 + res2
         return res.count(1), res.count(-1), res.count(0)

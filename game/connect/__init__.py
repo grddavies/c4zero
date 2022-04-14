@@ -1,12 +1,10 @@
 from .connect import ConnectGame, ConnectGameConfig, ConnectGameState, DropPiece
-from .connect_players import HumanConnectPlayer, RandomConnectPlayer, AIConnectPlayer
+from . import players
 
 __all__ = [
     "ConnectGame",
     "ConnectGameConfig",
     "ConnectGameState",
     "DropPiece",
-    "HumanConnectPlayer",
-    "RandomConnectPlayer",
-    "AIConnectPlayer",
+    "players",
 ]

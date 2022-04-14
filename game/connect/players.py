@@ -1,3 +1,4 @@
+from copy import deepcopy
 import numpy as np
 from .connect import ConnectGame, DropPiece
 from game.base import Player
@@ -5,7 +6,7 @@ from c4zero import C4Zero
 from MCTS import MCTS
 
 
-class HumanConnectPlayer(Player):
+class Human(Player):
     @staticmethod
     def to_readable_board(board: np.ndarray):
         b = board.astype(str).squeeze()
@@ -18,9 +19,7 @@ class HumanConnectPlayer(Player):
         print("Your move, you're 'O'")
         while True:
             print(self.to_readable_board(game.state.board))
-            selected = input(
-                "Select a column to place a piece into (zero-indexed): "
-            )
+            selected = input("Select a column to place a piece into (zero-indexed): ")
             try:
                 move = game.get_action(int(selected))
                 if move is None:
@@ -31,14 +30,14 @@ class HumanConnectPlayer(Player):
                 print(f"Invalid column: '{selected}'")
 
 
-class RandomConnectPlayer(Player):
+class Random(Player):
     verbose: bool
 
     def __init__(self, verbose: bool = False) -> None:
         self.verbose = verbose
 
     def play(self, game: ConnectGame):
-        actions = [a for i, a in game.get_valid_actions()]
+        actions = [a for _, a in game.get_valid_actions()]
         action = np.random.choice(actions)
         if self.verbose:
             if isinstance(action, DropPiece):
@@ -46,7 +45,31 @@ class RandomConnectPlayer(Player):
         return action
 
 
-class AIConnectPlayer(Player):
+class Greedy(Player):
+    verbose: bool
+
+    def __init__(self, verbose: bool = False) -> None:
+        self.verbose = verbose
+
+    def play(self, game: ConnectGame):
+        actions = [a for _, a in game.get_valid_actions()]
+        # Check for possible winning moves
+        for action in actions:
+            if game.move(action).check_winner(game.state.current_player):
+                if self.verbose:
+                    if isinstance(action, DropPiece):
+                        print(f"Random player moved in column {action.col}")
+                return action
+        # TODO: Block opponent winning moves
+        # Otherwise return a random action choice
+        action = np.random.choice(actions)
+        if self.verbose:
+            if isinstance(action, DropPiece):
+                print(f"Random player moved in column {action.col}")
+        return action
+
+
+class AI(Player):
     model: C4Zero
     n_sim: int
     verbose: bool

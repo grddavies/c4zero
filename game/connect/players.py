@@ -61,6 +61,14 @@ class Greedy(Player):
                         print(f"Random player moved in column {action.col}")
                 return action
         # TODO: Block opponent winning moves
+        for action in actions:
+            op_game = deepcopy(game)
+            op_game.state.board *= -1
+            if op_game.move(action).check_winner(game.state.current_player):
+                if self.verbose:
+                    if isinstance(action, DropPiece):
+                        print(f"Random player moved in column {action.col}")
+                return action
         # Otherwise return a random action choice
         action = np.random.choice(actions)
         if self.verbose:

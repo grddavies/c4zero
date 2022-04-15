@@ -1,3 +1,4 @@
+# pyright: reportUnknownMemberType=false, reportMissingTypeStubs=false
 import logging
 from typing import Any, Dict, List, Tuple, Optional
 
@@ -11,7 +12,7 @@ from torch.utils.data import DataLoader
 from arena import Arena
 from c4zero import C4Zero
 from game.base import Game, GamePlayDataset, GameState
-from game.connect.connect_players import AIConnectPlayer
+from game.connect.players import AI
 from MCTS import MCTS
 from util import ProgressParallel
 
@@ -35,7 +36,7 @@ class Trainer:
         self.best_model.to(self.device)
         self.game = game
         self.mcts = MCTS(game, self.model)
-        self.n_jobs = joblib.parallel.effective_n_jobs(n_jobs)
+        self.n_jobs: int = joblib.parallel.effective_n_jobs(n_jobs)  # type: ignore
 
     def execute_episode(
         self, n_simulations: int = 100, t_mcts: float = 1.0, t_move_thresh: int = 8
@@ -174,7 +175,9 @@ class Trainer:
             After this threshold, nodes are selected by max visit count.
 
         """
-        data = ProgressParallel(self.n_jobs, total=n_eps, leave=False)(
+        data: List[List[Tuple[np.ndarray, np.ndarray, float]]] = ProgressParallel(
+            self.n_jobs, total=n_eps, leave=False  # type: ignore
+        )(
             joblib.delayed(self.execute_episode)(n_sim, t_mcts, t_move_thresh)
             for _ in range(n_eps)
         )
@@ -197,8 +200,8 @@ class Trainer:
         self.model.train()
         total_loss = running_v_loss = running_p_loss = 0.0
         action_size = self.game.get_action_space()
-        for epoch in range(1, epochs + 1):
-            for i, minibatch in enumerate(dataloader):
+        for _ in range(1, epochs + 1):  # iter epochs
+            for _, minibatch in enumerate(dataloader):
                 boards, target_ps, target_vs = minibatch
                 # NOTE: Boards are encoded as: (batch_size, nchannel, width, height) to
                 # ensure compatibility with conv2d layers
@@ -237,8 +240,8 @@ class Trainer:
 
     def evaluate(self, n_games: int = 400, win_frac: float = 0.55):
         """Compare current model agains best model"""
-        p1 = AIConnectPlayer(self.model, n_sim=150)
-        p2 = AIConnectPlayer(self.best_model, n_sim=150)
+        p1 = AI(self.model, n_sim=150)
+        p2 = AI(self.best_model, n_sim=150)
         arena = Arena(p1, p2, self.game, self.n_jobs)
         w, l, d = arena.play_games(n_games)
         logger.info(f"New model: W:{w:d} L:{l:d} D: {d:d}")

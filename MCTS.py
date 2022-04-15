@@ -175,7 +175,7 @@ class MCTS:
                 value = node.game.reward_player(node.game.state.current_player)
             else:
                 # Expand & Evaluate
-                # TODO: Randomly reflect/rotate board along game symmetry line here
+                # TODO: #3 Randomly reflect/rotate board along game symmetry line here
                 # See Methods: Expand and Evaluate
                 action_probs, value = self.cached_predict(node)
                 node.expand(action_probs)

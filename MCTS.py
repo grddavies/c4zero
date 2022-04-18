@@ -22,7 +22,6 @@ class Node:
         self.value_sum = 0  # total value from all visits
         self.children = {}  # legal child positions
         self.game = game
-        # TODO: remove prefix `_`
         self._visit_count = 0
 
     @property

@@ -60,7 +60,7 @@ class Greedy(Player):
                     if isinstance(action, DropPiece):
                         print(f"Random player moved in column {action.col}")
                 return action
-        # TODO: Block opponent winning moves
+        # Block opponent winning moves
         for action in actions:
             op_game = deepcopy(game)
             op_game.state.board *= -1

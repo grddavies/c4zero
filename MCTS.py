@@ -39,6 +39,11 @@ class Node:
             return 0
         return self.value_sum / self.n
 
+    def increment(self):
+        """Increment visit count"""
+        self._visit_count += 1
+        return self
+
     def select_action(self, temperature: float):
         """
         Select an action from this node
@@ -194,11 +199,11 @@ class MCTS:
             node.value_sum += (
                 value if node.game.state.current_player == current_player else -value
             )
-            node._visit_count += 1
+            node.increment()
 
     def cached_predict(self, node: Node):
         """Predict policy at a given node and cache the result"""
         s = node.game.state.hash()
-        if s not in self._Ps:
+        if s not in self._Ps.keys():
             self._Ps[s], self._vs[s] = self.model.predict(node.game.encode())
         return self._Ps[s], self._vs[s]
